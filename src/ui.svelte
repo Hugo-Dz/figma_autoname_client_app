@@ -21,14 +21,10 @@
         };
         const response = await fetch(url, initObject);
         const responseJson = await response.json();
-        const { result } = responseJson;
-        console.log(`Result:`);
-        console.log(`-------------------`);
-        console.log(result);
-        window.parent.postMessage({ pluginMessage: { type: "close" } }, "*"); //Close plugin only when the request end
+        window.parent.postMessage({pluginMessage : {type : "response", payload : responseJson}}, "*"); //Close plugin only when the request end
       } catch (error) {
         console.log(error.message);
-        window.parent.postMessage({ pluginMessage: { type: "close" } }, "*"); //Close plugin only when the request end
+        window.parent.postMessage({ pluginMessage: { type: "response" } }, "*"); //TODO: Handle the error here: no payload
       }
     }
   };

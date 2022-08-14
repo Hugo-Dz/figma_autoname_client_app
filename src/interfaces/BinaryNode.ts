@@ -1,8 +1,8 @@
 interface BinaryNode {
   nodeId : string;
-  uint8Array : Uint8Array;
+  imageDataBytes : Uint8Array;
 }
 
 export default BinaryNode;
 
-//An object like {nodeId : "abcd", uint8Array : <bytes>}
+//An object like {nodeId : "abcd", imageDataBytes : <bytes>}
