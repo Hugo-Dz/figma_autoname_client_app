@@ -1,7 +1,10 @@
 <script lang="ts">
 
   import "./app.css";
+  import magicWand from "./lib//assets/magicWand.svg";
+  import loadingCircle from "./lib/assets/loadingCircle.svg";
   
+  let isLoading: boolean = false;
 
   const handleClick = () => {
     parent.postMessage({ pluginMessage: { type: "clickPredictButton" } }, "*");
@@ -16,15 +19,19 @@
           method: "POST",
           headers: {
             "Content-type": "application/json",
+            "x-api-key": "theBrownFox"
           },
           body: JSON.stringify({ imagesData: event.data.pluginMessage.data }),
         };
+        isLoading = true;
         const response = await fetch(url, initObject);
         const responseJson = await response.json();
         window.parent.postMessage({pluginMessage : {type : "response", payload : responseJson}}, "*"); //Close plugin only when the request end
+        isLoading = false;
       } catch (error) {
         console.log(error.message);
         window.parent.postMessage({ pluginMessage: { type: "response" } }, "*"); //TODO: Handle the error here: no payload
+        isLoading = false;
       }
     }
   };
@@ -33,10 +40,19 @@
 
 
 
-<main class="flex flex-col items-center justify-between px-4 py-4 h-full">
-  <h1 class="text-2xl text-center mb-8 mt-4">Name thousands of layers in one click</h1>
+<main class="flex flex-col items-center justify-between px-4 py-4 h-full bg-Black">
+
+  <h1 class="text-base font-medium text-white text-center mt-2">Select layers and press "Name"</h1>
+
+  <img src={magicWand} alt="Magic wand icon">
+
   <button
-    class="px-4 py-2 w-full font-bold rounded-md bg-black text-white border-[1px]"
-    on:click={handleClick}>Name my layers</button
-  >
+    class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs text-white font-medium rounded-md"
+    on:click={handleClick}>
+    {#if isLoading}
+      <img src={loadingCircle} alt="Loading circle" class="animate-spin mr-2">
+    {/if}
+    {isLoading ? `Processing...` : `Name`}
+  </button>
+
 </main>

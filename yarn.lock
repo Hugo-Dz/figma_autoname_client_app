@@ -905,6 +905,13 @@
   dependencies:
     "reusify" "^1.0.4"
 
+"figma-plugin-ds-svelte@^1.4.3":
+  "integrity" "sha512-a/8CHjsNiGD/cMItH0Tk0apyw/Fzgo6NsuywdEB89HDU5RWlgzGjeeHoIbyGjGBErJwxfGTGmzhn9afBFKp9eQ=="
+  "resolved" "https://registry.npmjs.org/figma-plugin-ds-svelte/-/figma-plugin-ds-svelte-1.4.3.tgz"
+  "version" "1.4.3"
+  dependencies:
+    "svelte-click-outside" "^1.0.0"
+
 "fill-range@^7.0.1":
   "integrity" "sha512-qOo9F+dMUmC2Lcb4BbVvnKJxTPjCm+RRpe4gDuGrzkL7mEVl/djYSu2OdQ2Pa302N4oqkSg9ir6jaLWJ2USVpQ=="
   "resolved" "https://registry.npmjs.org/fill-range/-/fill-range-7.0.1.tgz"
@@ -957,6 +964,11 @@
   "integrity" "sha1-FQStJSMVjKpA20onh8sBQRmU6k8= sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw=="
   "resolved" "https://registry.npmjs.org/fs.realpath/-/fs.realpath-1.0.0.tgz"
   "version" "1.0.0"
+
+"fsevents@~2.3.2":
+  "integrity" "sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA=="
+  "resolved" "https://registry.npmjs.org/fsevents/-/fsevents-2.3.2.tgz"
+  "version" "2.3.2"
 
 "function-bind@^1.1.1":
   "integrity" "sha512-yIovAzMX49sF8Yl58fSCWJ5svSLuaibPxXQJFLmBObTuCr0Mf1KiPopGM9NiFjiYBCbfaa2Fh6breQ6ANVTI0A=="
@@ -2687,6 +2699,11 @@
     "source-map" "^0.7.3"
     "svelte-preprocess" "^4.0.0"
     "typescript" "*"
+
+"svelte-click-outside@^1.0.0":
+  "integrity" "sha512-TVDn5Vd8L0WI0Y9BFh/2I7judkIqYCbFKkGwGl/f8D0inwBFNyU0weKhrbJY4VQtYnWriq0NPl+mIYGisgALbw=="
+  "resolved" "https://registry.npmjs.org/svelte-click-outside/-/svelte-click-outside-1.0.0.tgz"
+  "version" "1.0.0"
 
 "svelte-preprocess@^4.0.0", "svelte-preprocess@^4.10.7":
   "integrity" "sha512-sNPBnqYD6FnmdBrUmBCaqS00RyCsCpj2BG58A1JBswNF7b0OKviwxqVrOL/CKyJrLSClrSeqQv5BXNg2RUbPOw=="
