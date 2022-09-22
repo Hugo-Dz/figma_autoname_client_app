@@ -50,7 +50,7 @@
   <h1 class="text-base font-medium text-white text-center mt-2">Select layers and press "Name"</h1>
 
   {#if responseStatus === 401}
-    <p class="text-xs text-white font-medium">Non authorized</p>
+    <p class="text-xs text-white font-medium">Non authorized :/</p>
   {:else if responseStatus < 250}
   <p class="text-xs text-white font-medium">Error {responseStatus}</p>
   {:else}
