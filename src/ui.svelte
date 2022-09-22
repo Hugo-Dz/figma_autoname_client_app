@@ -5,6 +5,7 @@
   import loadingCircle from "./lib/assets/loadingCircle.svg";
   
   let isLoading: boolean = false;
+  let responseStatus: number;
 
   const handleClick = () => {
     parent.postMessage({ pluginMessage: { type: "clickPredictButton" } }, "*");
@@ -25,16 +26,20 @@
         };
         isLoading = true;
         const response = await fetch(url, initObject);
+        responseStatus = await response.status
         const responseJson = await response.json();
         window.parent.postMessage({pluginMessage : {type : "response", payload : responseJson}}, "*"); //Close plugin only when the request end
         isLoading = false;
       } catch (error) {
         console.log(error.message);
-        window.parent.postMessage({ pluginMessage: { type: "response" } }, "*"); //TODO: Handle the error here: no payload
         isLoading = false;
       }
     }
-  };
+  }
+
+  function closePlugin(): void {
+    window.parent.postMessage({ pluginMessage: { type: "close" } }, "*")
+  }
 
 </script>
 
@@ -44,15 +49,29 @@
 
   <h1 class="text-base font-medium text-white text-center mt-2">Select layers and press "Name"</h1>
 
-  <img src={magicWand} alt="Magic wand icon">
+  {#if responseStatus === 401}
+    <p class="text-xs text-white font-medium">Non authorized</p>
+  {:else if responseStatus < 250}
+  <p class="text-xs text-white font-medium">Error {responseStatus}</p>
+  {:else}
+    <img src={magicWand} alt="Magic wand icon">
+  {/if}
 
-  <button
-    class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs text-white font-medium rounded-md"
-    on:click={handleClick}>
-    {#if isLoading}
-      <img src={loadingCircle} alt="Loading circle" class="animate-spin mr-2">
-    {/if}
-    {isLoading ? `Processing...` : `Name`}
-  </button>
+  {#if responseStatus > 250}
+    <button
+      class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs text-white font-medium rounded-md"
+      on:click={closePlugin}>
+      Close
+    </button>
+  {:else}
+    <button
+      class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs text-white font-medium rounded-md"
+      on:click={handleClick}>
+      {#if isLoading}
+        <img src={loadingCircle} alt="Loading circle" class="animate-spin mr-2">
+      {/if}
+      {isLoading ? `Processing...` : `Name`}
+    </button>
+  {/if}
 
 </main>
