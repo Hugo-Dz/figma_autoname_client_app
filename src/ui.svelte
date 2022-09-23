@@ -3,6 +3,11 @@
   import "./app.css";
   import magicWand from "./lib//assets/magicWand.svg";
   import loadingCircle from "./lib/assets/loadingCircle.svg";
+  import predict from "./prediction/prediction";
+
+  import type BinaryNodeJson from "./interfaces/BinaryNodeJson";
+  import type PredictionResult from "./interfaces/PredictionResult";
+  import type BinaryNode from "./interfaces/BinaryNode";
   
   let isLoading: boolean = false;
   let responseStatus: number;
@@ -13,8 +18,27 @@
 
   //Handle the demand from the sandbox API to make a network request when the order is recieved
   window.onmessage = async (event) => {
-    if (event.data.pluginMessage.type === "networkRequest") {
+    if (event.data.pluginMessage.type === "processingRequest") {
+      isLoading = true;
       try {
+        const binaryNodesWithJsonBytes: BinaryNodeJson[] = event.data.pluginMessage.data;
+        let binaryNodes: BinaryNode[] = [];
+
+        binaryNodesWithJsonBytes.forEach((node: BinaryNodeJson) => {
+          const id: string = node.nodeId
+          const bytesArray: any[] = Object.entries(node.imageDataBytes).map(([key, value]) => value); //Transform {"0":122} -> [122, ..]
+          const bytes: Uint8Array = Uint8Array.from(bytesArray); //From uint8Array json (as receieved from the request)
+          binaryNodes = [...binaryNodes, {nodeId : id, imageDataBytes : bytes}]
+        });
+
+        const results = await runPrediction(binaryNodes);
+
+        window.parent.postMessage({pluginMessage : {type : "response", payload : results}}, "*");
+
+        isLoading = false;
+
+        //Old server side computing
+        /*
         const url = "https://figma-autoname-backend.herokuapp.com/api/predictNode"
         //const url = "http://localhost:4001/api/predictNode";
         const initObject = {
@@ -31,6 +55,8 @@
         const responseJson = await response.json();
         window.parent.postMessage({pluginMessage : {type : "response", payload : responseJson}}, "*"); //Close plugin only when the request end
         isLoading = false;
+        */
+
       } catch (error) {
         console.log(error.message);
         isLoading = false;
@@ -40,6 +66,21 @@
 
   function closePlugin(): void {
     window.parent.postMessage({ pluginMessage: { type: "close" } }, "*")
+  }
+
+  async function runPrediction(binaryNodes: BinaryNode[]): Promise<PredictionResult[]> {
+    let results: PredictionResult[] = [];
+    const startTime:  number = new Date().getTime();
+
+    for (let binaryNode of binaryNodes) {
+      const prediction: string = await predict(binaryNode.imageDataBytes);
+      results = [...results, {nodeId : binaryNode.nodeId, prediction : prediction}];
+    }
+
+    const endTime:  number = new Date().getTime();
+    console.log(`[PREDICTION]: MODEL RUN Execution time: ${endTime - startTime}ms`);
+
+    return results;
   }
 
 </script>

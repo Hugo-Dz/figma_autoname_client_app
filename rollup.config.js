@@ -1,6 +1,7 @@
 import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 import livereload from "rollup-plugin-livereload";
+import node from "@rollup/plugin-node-resolve";
 
 // Svelte related
 import svelte from "rollup-plugin-svelte";
@@ -20,6 +21,9 @@ import typescript from "rollup-plugin-typescript";
 
 //Image
 import image from "@rollup/plugin-image";
+
+//Rollup json plugin to use JSON packages
+import json from '@rollup/plugin-json';
 
 const production = !process.env.ROLLUP_WATCH;
 
@@ -48,6 +52,11 @@ export default [
         },
       }),
 
+      //Node
+      node(),
+
+      //dd
+
       // Handle external dependencies and prepare
       // the terrain for svelte later on
       resolve({
@@ -56,7 +65,6 @@ export default [
           importee === "svelte" || importee.startsWith("svelte/"),
         extensions: [".svelte", ".mjs", ".js", ".json", ".node", ".ts"],
       }),
-      commonjs({ transformMixedEsModules: true }),
 
       // Typescript
       typescript({ sourceMap: !production }),
@@ -68,6 +76,14 @@ export default [
 
       //Image plugin
       image(),
+
+      //JSON plugin
+      json(),
+
+      //Common JS plugin to import stuff that don't have default export
+      commonjs({
+        transformMixedEsModules: true
+      }),
 
       // This inject the bundled version of main.js
       // into the the template

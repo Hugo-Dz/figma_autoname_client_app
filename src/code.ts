@@ -9,8 +9,7 @@ figma.ui.onmessage = async msg => {
 
   if (msg.type === "clickPredictButton") {
     const imagesInBytes: BinaryNode[] = await renderElementsFromSelection(figma.currentPage.selection);
-    sendImagesToBackend(imagesInBytes);
-    
+    sendImagesToUi(imagesInBytes);
   }
 
   if (msg.type === "close") {
@@ -85,6 +84,6 @@ function selectAllNodesFromSelection (selection: readonly SceneNode[], exludeTyp
   return nodesWithoutText;
 }
 
-function sendImagesToBackend (imagesInBytes: BinaryNode[]) {
-  figma.ui.postMessage({type : "networkRequest", data : imagesInBytes}); //Send message to browser API
+function sendImagesToUi (imagesInBytes: BinaryNode[]) {
+  figma.ui.postMessage({type : "processingRequest", data : imagesInBytes}); //Send message to browser API
 }
