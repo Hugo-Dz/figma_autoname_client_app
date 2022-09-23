@@ -15,7 +15,8 @@
   window.onmessage = async (event) => {
     if (event.data.pluginMessage.type === "networkRequest") {
       try {
-        const url = "http://localhost:4001/api/predictNode";
+        const url = "https://figma-autoname-backend.herokuapp.com/api/predictNode"
+        //const url = "http://localhost:4001/api/predictNode";
         const initObject = {
           method: "POST",
           headers: {
