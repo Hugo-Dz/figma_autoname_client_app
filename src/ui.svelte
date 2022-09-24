@@ -19,7 +19,7 @@
   })
 
   async function loadWorker() {
-    const SyncWorker = await import("./workers/prediction.worker?worker"); //Not this way, we don't use Vite
+    const SyncWorker = await import("./workers/prediction.worker"); //Not this way, we don't use Vite
     syncWorker = new SyncWorker.default();
   }
 
