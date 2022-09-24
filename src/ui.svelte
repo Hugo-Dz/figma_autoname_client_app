@@ -3,7 +3,8 @@
   import "./app.css";
   import magicWand from "./lib//assets/magicWand.svg";
   import loadingCircle from "./lib/assets/loadingCircle.svg";
-  import predict from "./prediction/prediction";
+
+  import { onMount } from "svelte";
 
   import type BinaryNodeJson from "./interfaces/BinaryNodeJson";
   import type PredictionResult from "./interfaces/PredictionResult";
@@ -11,6 +12,16 @@
   
   let isLoading: boolean = false;
   let responseStatus: number;
+  let syncWorker: Worker | undefined = undefined;
+
+  onMount(() => {
+    loadWorker();
+  })
+
+  async function loadWorker() {
+    const SyncWorker = await import("./workers/prediction.worker?worker"); //Not this way, we don't use Vite
+    syncWorker = new SyncWorker.default();
+  }
 
   const handleClick = () => {
     parent.postMessage({ pluginMessage: { type: "clickPredictButton" } }, "*");
@@ -31,31 +42,14 @@
           binaryNodes = [...binaryNodes, {nodeId : id, imageDataBytes : bytes}]
         });
 
-        const results = await runPrediction(binaryNodes);
+        //TODO post message to worker with binaryNode as payload
+
+        //TODO get results in a results var
+        const results = "RESULT HERE";
 
         window.parent.postMessage({pluginMessage : {type : "response", payload : results}}, "*");
 
         isLoading = false;
-
-        //Old server side computing
-        /*
-        const url = "https://figma-autoname-backend.herokuapp.com/api/predictNode"
-        //const url = "http://localhost:4001/api/predictNode";
-        const initObject = {
-          method: "POST",
-          headers: {
-            "Content-type": "application/json",
-            "x-api-key": "theBrownFox"
-          },
-          body: JSON.stringify({ imagesData: event.data.pluginMessage.data }),
-        };
-        isLoading = true;
-        const response = await fetch(url, initObject);
-        responseStatus = await response.status
-        const responseJson = await response.json();
-        window.parent.postMessage({pluginMessage : {type : "response", payload : responseJson}}, "*"); //Close plugin only when the request end
-        isLoading = false;
-        */
 
       } catch (error) {
         console.log(error.message);
@@ -68,20 +62,7 @@
     window.parent.postMessage({ pluginMessage: { type: "close" } }, "*")
   }
 
-  async function runPrediction(binaryNodes: BinaryNode[]): Promise<PredictionResult[]> {
-    let results: PredictionResult[] = [];
-    const startTime:  number = new Date().getTime();
 
-    for (let binaryNode of binaryNodes) {
-      const prediction: string = await predict(binaryNode.imageDataBytes);
-      results = [...results, {nodeId : binaryNode.nodeId, prediction : prediction}];
-    }
-
-    const endTime:  number = new Date().getTime();
-    console.log(`[PREDICTION]: MODEL RUN Execution time: ${endTime - startTime}ms`);
-
-    return results;
-  }
 
 </script>
 
