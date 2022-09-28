@@ -71,7 +71,7 @@ function selectAllNodesFromSelection (selection: readonly SceneNode[], exludeTyp
     selectedNodes = [...selectedNodes, node]; //Push the primary nodes in the selection
     if (node.type === "FRAME" || node.type === "GROUP") {
       const children: SceneNode[] = node.findAll();
-      childrenFromSelectedNodes = [...selectedNodes, children];
+      childrenFromSelectedNodes = [...childrenFromSelectedNodes, children];
     }
   })
 
@@ -85,5 +85,6 @@ function selectAllNodesFromSelection (selection: readonly SceneNode[], exludeTyp
 }
 
 function sendImagesToUi (imagesInBytes: BinaryNode[]) {
+  console.log(`Nodes sent to predictions: ${imagesInBytes.length}`)
   figma.ui.postMessage({type : "processingRequest", data : imagesInBytes}); //Send message to browser API
 }
