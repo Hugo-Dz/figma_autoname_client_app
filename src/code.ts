@@ -2,6 +2,11 @@ import type BinaryNode from "./interfaces/BinaryNode"
 import type PredictionResult from "./interfaces/PredictionResult";
 
 
+//Disable infinite recursivity in nodes or limit it
+const selectOnlyTopLevelNodes: boolean = true;
+const maxSubNodes: number = 3;
+
+
 figma.showUI(__html__);
 
 
@@ -43,13 +48,13 @@ figma.ui.onmessage = async msg => {
 
 async function renderElementsFromSelection (selection: readonly SceneNode[]) {
 
-  const allSelectedNodes: SceneNode[] = selectAllNodesFromSelection(figma.currentPage.selection, "TEXT");
+  const allSelectedNodes: SceneNode[] | readonly SceneNode[] = selectOnlyTopLevelNodes ? selectOnlyTopLevelNode(figma.currentPage.selection, "TEXT") : selectAllNodesFromSelection(figma.currentPage.selection, "TEXT");
   const binaryNodes: BinaryNode[] = await sceneNodeToBinaryNode(allSelectedNodes);
 
   return binaryNodes;
 }
 
-async function sceneNodeToBinaryNode (sceneNodes: SceneNode[]): Promise<BinaryNode[]> {
+async function sceneNodeToBinaryNode (sceneNodes: SceneNode[] | readonly SceneNode[]): Promise<BinaryNode[]> {
   //Convert a scene node to my custom type: {id: 1, imageDataBytes: <uint8Array>}
 
   let renderedNodes: BinaryNode[] = [];
@@ -72,7 +77,7 @@ function selectAllNodesFromSelection (selection: readonly SceneNode[], exludeTyp
     selectedNodes = [...selectedNodes, node]; //Push the primary nodes in the selection
     if (node.type === "FRAME" || node.type === "GROUP") {
       const children: SceneNode[] = node.findAll();
-      childrenFromSelectedNodes = [...selectedNodes, children];
+      childrenFromSelectedNodes = [...childrenFromSelectedNodes, children];
     }
   })
 
@@ -83,6 +88,11 @@ function selectAllNodesFromSelection (selection: readonly SceneNode[], exludeTyp
   const nodesWithoutText: SceneNode[] = selectedNodesAndAllChildrenWithoutDuplicate.filter((node) => node.type !== exludeType);
 
   return nodesWithoutText;
+}
+
+function selectOnlyTopLevelNode(selection: readonly SceneNode[], exludeType: string): readonly SceneNode[] {
+  let selectedNodes: readonly SceneNode[] = selection;
+  return selectedNodes;
 }
 
 function sendImagesToBackend (imagesInBytes: BinaryNode[]) {
