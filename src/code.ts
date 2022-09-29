@@ -60,12 +60,29 @@ async function sceneNodeToBinaryNode (sceneNodes: SceneNode[] | readonly SceneNo
   let renderedNodes: BinaryNode[] = [];
 
   for (const node of sceneNodes) {
+
+    const baseNodeWidth: number = node.width;
+    const baseNodeHeight: number = node.height;
+    const largestMeasure = Math.max(baseNodeHeight, baseNodeWidth);
+    const ratio = Number(224 / largestMeasure).toFixed(2);
+    const nodeToRender = largestMeasure > 224 ? minifyNode(node, parseFloat(ratio)) : node;
+
     const id: string = node.id;
-    const bytes: Uint8Array = await node.exportAsync({format : "JPG"});
+    //const bytes: Uint8Array = await node.exportAsync({format : "JPG"});
+    const bytes: Uint8Array = await nodeToRender.exportAsync({format : "JPG"});
     renderedNodes = [...renderedNodes, {nodeId : id, imageDataBytes : bytes}];
+    if (nodeToRender !== node) {
+      nodeToRender.remove();
+    }
   }
 
   return renderedNodes;
+}
+
+function minifyNode(node: SceneNode, ratio: number): SceneNode {
+    const minifiedNode: SceneNode = node.clone();
+    minifiedNode.rescale(ratio);
+    return minifiedNode;
 }
 
 function selectAllNodesFromSelection (selection: readonly SceneNode[], exludeType: string): SceneNode[] {
