@@ -1,11 +1,18 @@
 <script lang="ts">
 
+  import { onMount } from "svelte";
+
   import "./app.css";
   import magicWand from "./lib//assets/magicWand.svg";
   import loadingCircle from "./lib/assets/loadingCircle.svg";
   
   let isLoading: boolean = false;
   let responseStatus: number;
+  let isOnline: boolean;
+
+  onMount(() => {
+    isOnline = checkInternetConnection();
+  })
 
   const handleClick = () => {
     parent.postMessage({ pluginMessage: { type: "clickPredictButton" } }, "*");
@@ -15,8 +22,8 @@
   window.onmessage = async (event) => {
     if (event.data.pluginMessage.type === "networkRequest") {
       try {
-        //const url = "https://figma-autoname-backend.herokuapp.com/api/predictNode" //Heroku
-        const url = "https://figma-autoname-backend-dy9w4.ondigitalocean.app/api/predictNode"; //DigitalOcean
+        const url = "https://figma-autoname-backend.herokuapp.com/api/predictNode" //Heroku
+        //const url = "https://figma-autoname-backend-dy9w4.ondigitalocean.app/api/predictNode"; //DigitalOcean
         //const url = "http://localhost:4001/api/predictNode"; //Localhost
         const initObject = {
           method: "POST",
@@ -28,12 +35,12 @@
         };
         isLoading = true;
         const response = await fetch(url, initObject);
-        responseStatus = await response.status
+        responseStatus = await response.status;
         const responseJson = await response.json();
         window.parent.postMessage({pluginMessage : {type : "response", payload : responseJson}}, "*"); //Close plugin only when the request end
         isLoading = false;
       } catch (error) {
-        console.log(error.message);
+        console.log(`[Svelte]: Error: ${error.message}`);
         isLoading = false;
       }
     }
@@ -41,6 +48,13 @@
 
   function closePlugin(): void {
     window.parent.postMessage({ pluginMessage: { type: "close" } }, "*")
+  }
+
+  function checkInternetConnection(): boolean {
+    let isOnline: boolean;
+    isOnline = navigator.onLine ? true : false;
+    console.log(`[Svelte]: Connection status: ${isOnline ? "Online" : "Offline"}`);
+    return isOnline;
   }
 
 </script>
@@ -65,8 +79,14 @@
       on:click={closePlugin}>
       Close
     </button>
-  {:else}
+  {:else if !isOnline}
     <button
+      class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs cursor-not-allowed grayscale text-white font-medium rounded-md"
+      >
+      No connection :/
+    </button>
+  {:else}
+      <button
       class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs text-white font-medium rounded-md"
       on:click={handleClick}>
       {#if isLoading}

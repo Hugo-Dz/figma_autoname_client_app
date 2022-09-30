@@ -38,7 +38,7 @@ figma.ui.onmessage = async msg => {
 
     const endTime: number = new Date().getTime();
 
-    console.log(`FIGMA RENAME LAYERS Execution time in Figma: ${endTime - startTime}s`);
+    console.log(`[Figma]: Renaming layer time: ${endTime - startTime}s`);
 
     figma.closePlugin();
   }
