@@ -1,13 +1,15 @@
 import type BinaryNode from "./interfaces/BinaryNode"
 import type PredictionResult from "./interfaces/PredictionResult";
 
+import isDebugMode from "./utils/debugMode";
 
 //Disable infinite recursivity in nodes or limit it
 const selectOnlyTopLevelNodes: boolean = true;
 const maxSubNodes: number = 3;
+const pluginUiHeight = isDebugMode ? 424 : 200;
 
 
-figma.showUI(__html__);
+figma.showUI(__html__, {height: pluginUiHeight});
 
 
 figma.ui.onmessage = async msg => {
@@ -40,7 +42,7 @@ figma.ui.onmessage = async msg => {
 
     console.log(`[Figma]: Renaming layer time: ${endTime - startTime}s`);
 
-    figma.closePlugin();
+    //figma.closePlugin();
   }
   
 }
@@ -66,13 +68,17 @@ async function sceneNodeToBinaryNode (sceneNodes: SceneNode[] | readonly SceneNo
     const largestMeasure = Math.max(baseNodeHeight, baseNodeWidth);
     const ratio = Number(224 / largestMeasure).toFixed(2);
     const nodeToRender = largestMeasure > 224 ? minifyNode(node, parseFloat(ratio)) : node;
+    const frameTheNodeToRender: SceneNode = frameANode(nodeToRender);
 
     const id: string = node.id;
     //const bytes: Uint8Array = await node.exportAsync({format : "JPG"});
-    const bytes: Uint8Array = await nodeToRender.exportAsync({format : "JPG"});
+    const bytes: Uint8Array = await frameTheNodeToRender.exportAsync({format : "JPG"});
     renderedNodes = [...renderedNodes, {nodeId : id, imageDataBytes : bytes}];
     if (nodeToRender !== node) {
       nodeToRender.remove();
+    }
+    if (frameTheNodeToRender !== node) {
+      frameTheNodeToRender.remove();
     }
   }
 
@@ -83,6 +89,22 @@ function minifyNode(node: SceneNode, ratio: number): SceneNode {
     const minifiedNode: SceneNode = node.clone();
     minifiedNode.rescale(ratio);
     return minifiedNode;
+}
+
+function frameANode(node: SceneNode): SceneNode {
+  const frame: FrameNode = figma.createFrame();
+  const child: SceneNode = node.clone();
+  frame.layoutMode = "HORIZONTAL";
+  frame.counterAxisAlignItems = "CENTER";
+  frame.primaryAxisAlignItems = "CENTER";
+  frame.counterAxisSizingMode = "AUTO";
+  frame.primaryAxisSizingMode = "AUTO";
+  child.layoutGrow = 0;
+  frame.insertChild(0, child);
+  frame.resize(224, 224);
+  
+  
+  return frame;
 }
 
 function selectAllNodesFromSelection (selection: readonly SceneNode[], exludeType: string): SceneNode[] {
