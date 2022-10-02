@@ -26,7 +26,7 @@ figma.ui.onmessage = async msg => {
   }
 
   if (msg.type === "response") {
-    const nodesToRename: SceneNode[] = selectAllNodesFromSelection(figma.currentPage.selection, "TEXT");
+    const nodesToRename: SceneNode[] = selectAllNodesFromSelection(figma.currentPage.selection, ["TEXT"]);
     const msgPayload: PredictionResult[] = msg.payload;
     
     const startTime:  number = new Date().getTime();
@@ -55,7 +55,7 @@ figma.ui.onmessage = async msg => {
 
 async function renderElementsFromSelection (selection: readonly SceneNode[]) {
 
-  const allSelectedNodes: SceneNode[] | readonly SceneNode[] = selectOnlyTopLevelNodes ? selectOnlyTopLevelNode(figma.currentPage.selection, "TEXT") : selectAllNodesFromSelection(figma.currentPage.selection, "TEXT");
+  const allSelectedNodes: SceneNode[] | readonly SceneNode[] = selectOnlyTopLevelNodes ? selectOnlyTopLevelNode(figma.currentPage.selection) : selectAllNodesFromSelection(figma.currentPage.selection, ["TEXT", "VECTOR"]);
   const binaryNodes: BinaryNode[] = await sceneNodeToBinaryNode(allSelectedNodes);
 
   return binaryNodes;
@@ -112,7 +112,7 @@ function frameANode(node: SceneNode): SceneNode {
   return frame;
 }
 
-function selectAllNodesFromSelection (selection: readonly SceneNode[], exludeType: string): SceneNode[] {
+function selectAllNodesFromSelection (selection: readonly SceneNode[], excludeTypes: string[]): SceneNode[] {
 
   let selectedNodes: SceneNode[] = [];
   let childrenFromSelectedNodes = [];
@@ -129,12 +129,18 @@ function selectAllNodesFromSelection (selection: readonly SceneNode[], exludeTyp
   const selectedNodesAndAllChildren: SceneNode[] = selectedNodes.concat(mergedChildrenFromSelectednodes);
   const selectedNodesAndAllChildrenWithoutDuplicate: SceneNode[] = [...new Set(selectedNodesAndAllChildren)]; //Remove all duplicate (TODO: improve this)
 
-  const nodesWithoutText: SceneNode[] = selectedNodesAndAllChildrenWithoutDuplicate.filter((node) => node.type !== exludeType);
+  const nodesWithoutExcluded: SceneNode[] = selectedNodesAndAllChildrenWithoutDuplicate.filter((node) => {
+    if (excludeTypes.includes(node.type)) {
+      return false;
+    } else {
+      return true;
+    }
+  });
 
-  return nodesWithoutText;
+  return nodesWithoutExcluded;
 }
 
-function selectOnlyTopLevelNode(selection: readonly SceneNode[], exludeType: string): readonly SceneNode[] {
+function selectOnlyTopLevelNode(selection: readonly SceneNode[]): readonly SceneNode[] {
   let selectedNodes: readonly SceneNode[] = selection;
   return selectedNodes;
 }

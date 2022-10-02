@@ -23,7 +23,6 @@
   });
 
   const handleClick = () => {
-    console.log(`Handle click`);
     parent.postMessage({ pluginMessage: { type: "clickPredictButton" } }, "*");
   };
 
