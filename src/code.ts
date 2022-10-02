@@ -102,8 +102,9 @@ function frameANode(node: SceneNode): SceneNode {
   frame.layoutMode = "HORIZONTAL";
   frame.counterAxisAlignItems = "CENTER";
   frame.primaryAxisAlignItems = "CENTER";
-  frame.counterAxisSizingMode = "AUTO";
-  frame.primaryAxisSizingMode = "AUTO";
+  frame.counterAxisSizingMode = "FIXED";
+  frame.primaryAxisSizingMode = "FIXED";
+  child.layoutAlign = "INHERIT"
   child.layoutGrow = 0;
   frame.insertChild(0, child);
   frame.resize(224, 224);
