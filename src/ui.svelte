@@ -29,6 +29,7 @@
   });
 
   const handleClick = () => {
+    isLoading = true;
     parent.postMessage({ pluginMessage: { type: "clickPredictButton" } }, "*");
   };
 
@@ -42,8 +43,6 @@
     if (event.data.pluginMessage.type === "processingRequest") {
 
       emptySelection = false;
-
-      isLoading = true;
 
       const binaryNodes: BinaryNode[] = event.data.pluginMessage.data;
 
@@ -79,7 +78,9 @@
 
     const pixelImage: HTMLImageElement = await renderUint8ArrayToImage(node.imageDataBytes);
 
-    sampleImage = pixelImage;
+    if (isDebugMode) {
+      sampleImage = pixelImage;
+    }
 
     const prediction: any[] = await model.predict(pixelImage);
     
@@ -122,7 +123,7 @@
 <svelte:head />
 
 <main
-  class="flex flex-col items-center justify-between px-4 py-4 h-full bg-Black"
+  class="flex flex-col items-center justify-between px-4 py-4 h-full bg-[#2C2C2C]"
 >
   <title-container class="flex flex-col items-center w-full space-y-4">
     <h1 class="text-base font-medium text-white text-center mt-2">
@@ -151,7 +152,9 @@
     {#if responseStatus === 401}
       <p class="text-xs text-white font-medium mb-4">Non authorized :/</p>
     {:else if !isDebugMode}
-      <img src={magicWand} alt="Magic wand icon" class="mb-8" />
+      <magic-wand-container class="p-4 rounded-full flex flex-col items-center justify-center m-6">
+        <img src={magicWand} alt="Magic wand icon" class="-translate-x-[3px] translate-y-[2px]"/>
+      </magic-wand-container>
     {/if}
 
     {#if responseStatus > 250}
