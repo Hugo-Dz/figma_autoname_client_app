@@ -22,20 +22,11 @@
     if (event.data.pluginMessage.type === "processingRequest") {
       isLoading = true;
       try {
-        let binaryNodes: BinaryNode[] = [];
+        let binaryNodes: BinaryNode[] = event.data.pluginMessage.data;
         let results: PredictionResult[];
 
-        //Get data from Figma sandbox
-        const binaryNodesWithJsonBytes: BinaryNodeJson[] = event.data.pluginMessage.data;
-
-        binaryNodesWithJsonBytes.forEach((node: BinaryNodeJson) => {
-          const id: string = node.nodeId
-          const bytesArray: any[] = Object.entries(node.imageDataBytes).map(([key, value]) => value); //Transform {"0":122} -> [122, ..]
-          const bytes: Uint8Array = Uint8Array.from(bytesArray); //From uint8Array json (as receieved from the request)
-          binaryNodes = [...binaryNodes, {nodeId : id, imageDataBytes : bytes}]
-        });
-
-        results = await runPredictions(binaryNodes);
+        console.log(binaryNodes);
+        
 
         //Send result to Figma sandbox
         window.parent.postMessage({pluginMessage : {type : "response", payload : results}}, "*");
@@ -53,39 +44,7 @@
     window.parent.postMessage({ pluginMessage: { type: "close" } }, "*")
   }
 
-  function tfReady(): void {
-    console.log(`[TF]: Script loaded`);
-  }
 
-  function decodeImageToTensor (image: Uint8Array) {
-    const imageTensor: tf.Tensor<tf.Rank.R3> = tf.browser.fromPixels({data: image, width: 224, height: 224}).expandDims(0); //Add a dimension
-    const resizedImageTensor: tf.Tensor<tf.Rank.R3> = tf.image.resizeBilinear(imageTensor, [224, 224]); //Resize tensor shape
-    return resizedImageTensor;
-  }
-  
-
-  async function predict (image: Uint8Array) {
-    const model = await tf.loadLayersModel("http://localhost:4001/api/model"); //TODO fetch() the model on a tiny server
-    const tensor = decodeImageToTensor(image);
-    const result = await model.predict(tensor) as tf.Tensor; //To get labels
-    const data = await result.as1D().argMax().dataSync()[0];
-    return labels[data];
-  }
-
-  async function runPredictions(binaryNodes: BinaryNode[]): Promise<PredictionResult[]> {
-    let results: PredictionResult[] = [];
-    const startTime:  number = new Date().getTime();
-
-    for (let binaryNode of binaryNodes) {
-      const prediction: string = await predict(binaryNode.imageDataBytes);
-      results = [...results, {nodeId : binaryNode.nodeId, prediction : prediction}];
-    }
-
-    const endTime:  number = new Date().getTime();
-    console.log(`[PREDICTIONS]: MODEL RUN Execution time: ${endTime - startTime}ms`);
-
-    return results;
-  }
 
 
 
@@ -94,7 +53,7 @@
 
 
 <svelte:head>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js" type="text/javascript" on:load={tfReady}></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js" type="text/javascript"></script>
 </svelte:head>
 
 <main class="flex flex-col items-center justify-between px-4 py-4 h-full bg-Black">
