@@ -12,37 +12,44 @@
   import isDebugMode from "src/utils/debugMode";
 
   let isLoading: boolean = false;
+  let emptySelection: boolean = false;
   let responseStatus: number;
   let isOnline: boolean;
   let sampleImage: HTMLImageElement = new Image();
+  let model, labelContainer, maxPredictions;
 
   onMount(() => {
     isOnline = checkInternetConnection();
   });
 
   const handleClick = () => {
+    console.log(`Handle click`);
     parent.postMessage({ pluginMessage: { type: "clickPredictButton" } }, "*");
   };
 
   //Handle the demand from the sandbox API to make a network request when the order is recieved
   window.onmessage = async (event) => {
+
+    if (event.data.pluginMessage.type === "emptySelection") {
+      emptySelection = true;
+    }
+
     if (event.data.pluginMessage.type === "processingRequest") {
+
+      emptySelection = false;
 
       isLoading = true;
 
       const binaryNodes: BinaryNode[] = event.data.pluginMessage.data;
-      console.log(`Nodes from Figma:`);
-      console.log(binaryNodes);
 
       if (isDebugMode) {
-        sampleImage = await renderUint8ArrayToImage(binaryNodes[2].imageDataBytes);
+        sampleImage = await renderUint8ArrayToImage(binaryNodes[0].imageDataBytes);
       }
 
-      let results: PredictionResult[];
+      let results: PredictionResult[] = [];
 
       //TM PREDICTION SETUP, NO TYPES
       const URL = "https://teachablemachine.withgoogle.com/models/7TY9ihr-l/";
-      let model, webcam, labelContainer, maxPredictions;
       const modelURL = URL + "model.json";
       const metadataURL = URL + "metadata.json";
       //@ts-ignore
@@ -51,49 +58,40 @@
 
       //TM PREDICTION LOOP
 
-      /*
-        for (let node of binaryNodes) {
-          let pixelImage: HTMLImageElement = renderUint8ArrayToImage(node.imageDataBytes);
-          const prediction = await model.predict(pixelImage);
-          console.dir(prediction);
-        }
-        */
-      const r = await predict(binaryNodes, model);
-      console.log(r);
+      for (let node of binaryNodes) {
+        const predictedNode: PredictionResult = await predict(node);
+        results = [...results, predictedNode];
+      }
 
-      /*
-        let pixelImage1: HTMLImageElement = renderUint8ArrayToImage(binaryNodes[0].imageDataBytes);
-        const prediction1 = await model.predict(pixelImage1);
-        console.log(prediction1);
-
-        let pixelImage2: HTMLImageElement = renderUint8ArrayToImage(binaryNodes[1].imageDataBytes);
-        const prediction2 = await model.predict(pixelImage2);
-        console.log(prediction2);
-        */
+      console.log(`[Svelte]: prediction results`);
+      console.log(results);
 
       //Send result to Figma sandbox
-      //window.parent.postMessage({pluginMessage : {type : "response", payload : results}}, "*");
+      window.parent.postMessage({pluginMessage : {type : "response", payload : results}}, "*");
 
       isLoading = false;
     }
   };
 
-  async function predict(nodes: BinaryNode[], model): Promise<any> {
+  async function predict(node: BinaryNode): Promise<PredictionResult> {
 
-    console.log(`Predict ${nodes.length} nodes.`);
+    const pixelImage: HTMLImageElement = await renderUint8ArrayToImage(node.imageDataBytes);
 
-    let results: any[] = [];
+    sampleImage = pixelImage;
 
-    for (let i = 0; i < nodes.length; i++) {
-      const pixelImage: HTMLImageElement = await renderUint8ArrayToImage(
-        nodes[i].imageDataBytes
-      );
-      //sampleImage = pixelImage;
-      const prediction = await model.predict(pixelImage);
-      results = [...results, prediction];
-      pixelImage.remove();
+    const prediction: any[] = await model.predict(pixelImage);
+    
+    let sortedProbabilities = prediction.sort((a, b) => a.probability - b.probability);
+    let finalist = sortedProbabilities.pop();
+
+    const predictedNode: PredictionResult = {
+      nodeId : node.nodeId,
+      prediction : finalist.className
     }
-    return results;
+
+    pixelImage.remove();
+
+    return predictedNode;
   }
 
   function closePlugin(): void {
@@ -166,6 +164,13 @@
         class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs cursor-not-allowed grayscale text-white font-medium rounded-md"
       >
         No connection :/
+      </button>
+    {:else if emptySelection}
+      <button
+        class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs text-white font-medium rounded-md"
+        on:click={handleClick}
+      >
+        Please selects layers
       </button>
     {:else}
       <button

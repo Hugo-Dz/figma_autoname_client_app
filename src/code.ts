@@ -4,7 +4,7 @@ import type PredictionResult from "./interfaces/PredictionResult";
 import isDebugMode from "src/utils/debugMode";
 
 //Disable infinite recursivity in nodes or limit it
-const selectOnlyTopLevelNodes: boolean = true;
+const selectOnlyTopLevelNodes: boolean = false;
 const maxSubNodes: number = 3;
 const pluginUiHeight = isDebugMode ? 424 : 200;
 
@@ -15,13 +15,14 @@ figma.showUI(__html__, {height: pluginUiHeight});
 figma.ui.onmessage = async msg => {
 
   if (msg.type === "clickPredictButton") {
-    const imagesInBytes: BinaryNode[] = await renderElementsFromSelection(figma.currentPage.selection);
-    sendImagesToBackend(imagesInBytes);
-    
-  }
 
-  if (msg.type === "close") {
-    figma.closePlugin();
+    if (figma.currentPage.selection.length < 1) {
+      figma.ui.postMessage({type : "emptySelection"});
+    } else {
+      const imagesInBytes: BinaryNode[] = await renderElementsFromSelection(figma.currentPage.selection);
+      sendImagesToUi(imagesInBytes);
+    }
+    
   }
 
   if (msg.type === "response") {
@@ -43,6 +44,10 @@ figma.ui.onmessage = async msg => {
     console.log(`[Figma]: Renaming layer time: ${endTime - startTime}s`);
 
     //figma.closePlugin();
+  }
+
+  if (msg.type === "close") {
+    figma.closePlugin();
   }
   
 }
@@ -134,6 +139,6 @@ function selectOnlyTopLevelNode(selection: readonly SceneNode[], exludeType: str
   return selectedNodes;
 }
 
-function sendImagesToBackend (imagesInBytes: BinaryNode[]) {
+function sendImagesToUi (imagesInBytes: BinaryNode[]) {
   figma.ui.postMessage({type : "processingRequest", data : imagesInBytes}); //Send message to browser API
 }
