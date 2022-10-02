@@ -14,8 +14,7 @@
   let isLoading: boolean = false;
   let responseStatus: number;
   let isOnline: boolean;
-  let image: HTMLImageElement = new Image();
-  const labels = ["Button", "Calendar"];
+  let sampleImage: HTMLImageElement = new Image();
 
   onMount(() => {
     isOnline = checkInternetConnection();
@@ -28,48 +27,74 @@
   //Handle the demand from the sandbox API to make a network request when the order is recieved
   window.onmessage = async (event) => {
     if (event.data.pluginMessage.type === "processingRequest") {
+
       isLoading = true;
+
+      const binaryNodes: BinaryNode[] = event.data.pluginMessage.data;
+      console.log(`Nodes from Figma:`);
+      console.log(binaryNodes);
+
       if (isDebugMode) {
-          image = renderUint8ArrayToImage(event.data.pluginMessage.data[0].imageDataBytes);
-        }
-      try {
-        let binaryNodes: BinaryNode[] = event.data.pluginMessage.data;
-        let results: PredictionResult[];
+        sampleImage = await renderUint8ArrayToImage(binaryNodes[2].imageDataBytes);
+      }
 
-        console.log(`Nodes from Figma:`);
-        console.log(binaryNodes);
+      let results: PredictionResult[];
 
-        //TM PREDICTION SETUP, NO TYPES
-        const URL = "https://teachablemachine.withgoogle.com/models/7TY9ihr-l/";
-        let model, webcam, labelContainer, maxPredictions;
-        const modelURL = URL + "model.json";
-        const metadataURL = URL + "metadata.json";
-        //@ts-ignore
-        model = await tmImage.load(modelURL, metadataURL);
-        console.log(model);
-        maxPredictions = model.getTotalClasses();
+      //TM PREDICTION SETUP, NO TYPES
+      const URL = "https://teachablemachine.withgoogle.com/models/7TY9ihr-l/";
+      let model, webcam, labelContainer, maxPredictions;
+      const modelURL = URL + "model.json";
+      const metadataURL = URL + "metadata.json";
+      //@ts-ignore
+      model = await tmImage.load(modelURL, metadataURL);
+      maxPredictions = model.getTotalClasses();
 
-        //TM PREDICTION LOOP
+      //TM PREDICTION LOOP
+
+      /*
         for (let node of binaryNodes) {
           let pixelImage: HTMLImageElement = renderUint8ArrayToImage(node.imageDataBytes);
-          console.log(`start prediction for the image ${pixelImage}`);
           const prediction = await model.predict(pixelImage);
-          console.log(`end prediction`);
-          console.log(prediction);
+          console.dir(prediction);
         }
+        */
+      const r = await predict(binaryNodes, model);
+      console.log(r);
 
+      /*
+        let pixelImage1: HTMLImageElement = renderUint8ArrayToImage(binaryNodes[0].imageDataBytes);
+        const prediction1 = await model.predict(pixelImage1);
+        console.log(prediction1);
 
+        let pixelImage2: HTMLImageElement = renderUint8ArrayToImage(binaryNodes[1].imageDataBytes);
+        const prediction2 = await model.predict(pixelImage2);
+        console.log(prediction2);
+        */
 
-        //Send result to Figma sandbox
-        //window.parent.postMessage({pluginMessage : {type : "response", payload : results}}, "*");
+      //Send result to Figma sandbox
+      //window.parent.postMessage({pluginMessage : {type : "response", payload : results}}, "*");
 
-        isLoading = false;
-      } catch (error) {
-        console.log(error.message);
-        isLoading = false;
-      }
+      isLoading = false;
     }
   };
+
+  async function predict(nodes: BinaryNode[], model): Promise<any> {
+
+    console.log(`Predict ${nodes.length} nodes.`);
+
+    let results: any[] = [];
+
+    for (let i = 0; i < nodes.length; i++) {
+      const pixelImage: HTMLImageElement = await renderUint8ArrayToImage(
+        nodes[i].imageDataBytes
+      );
+      //sampleImage = pixelImage;
+      const prediction = await model.predict(pixelImage);
+      results = [...results, prediction];
+      pixelImage.remove();
+    }
+    return results;
+  }
 
   function closePlugin(): void {
     window.parent.postMessage({ pluginMessage: { type: "close" } }, "*");
@@ -84,37 +109,41 @@
     return isOnline;
   }
 
-  function renderUint8ArrayToImage(bytes: Uint8Array): HTMLImageElement {
-    const uintArray = Uint8Array.from(bytes);
-    let image: HTMLImageElement = new Image();
-    image.src = URL.createObjectURL(
-      new Blob([uintArray.buffer], { type: "image/png" })
-    );
-    return image;
+  async function renderUint8ArrayToImage(bytes: Uint8Array): Promise<HTMLImageElement> {
+    const newImage = new Image(224, 224);
+    const base64Data = btoa(String.fromCharCode.apply(null, bytes)); //No Buffer.from(bytes).toString('base64'); cause we are not in Node
+    newImage.src = "data:image/png;base64," + base64Data;
+    return newImage;
   }
+
 
 </script>
 
+<svelte:head />
 
-
-<svelte:head>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js" type="text/javascript"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.3/dist/teachablemachine-image.min.js" type="text/javascript"></script>
-</svelte:head>
-
-<main class="flex flex-col items-center justify-between px-4 py-4 h-full bg-Black">
-  
+<main
+  class="flex flex-col items-center justify-between px-4 py-4 h-full bg-Black"
+>
   <title-container class="flex flex-col items-center w-full space-y-4">
     <h1 class="text-base font-medium text-white text-center mt-2">
-      SelectSSS layers and press "Name"
+      Select layers and press "Name"
     </h1>
-  
+
     {#if isDebugMode}
-      <p class="text-gray-400 text-xs px-2 py-1 border-[1px] w-fit border-gray-400 rounded">
+      <p
+        class="text-gray-400 text-xs px-2 py-1 border-[1px] w-fit border-gray-400 rounded"
+      >
         Debug mode
       </p>
-      <p class="text-gray-400 justify-center text-xs">Image sent to the model 👇</p>
-      <img src={image.src} alt="Pixels sent to the model" bind:this={image} class="rounded-md" />
+      <p class="text-gray-400 justify-center text-xs">
+        Image sent to the model 👇
+      </p>
+      <img
+        src={sampleImage.src}
+        alt="Pixels sent to the model"
+        bind:this={sampleImage}
+        class="rounded-md"
+      />
     {/if}
   </title-container>
 
@@ -154,5 +183,4 @@
       </button>
     {/if}
   </body-container>
-
 </main>
