@@ -1,15 +1,23 @@
 import type BinaryNode from "./interfaces/BinaryNode"
 import type PredictionResult from "./interfaces/PredictionResult";
 
+import isDebugMode from "src/utils/debugMode";
 
-figma.showUI(__html__);
+//Disable infinite recursivity in nodes or limit it
+const selectOnlyTopLevelNodes: boolean = true;
+const maxSubNodes: number = 3;
+const pluginUiHeight = isDebugMode ? 424 : 200;
+
+
+figma.showUI(__html__, {height: pluginUiHeight});
 
 
 figma.ui.onmessage = async msg => {
 
   if (msg.type === "clickPredictButton") {
     const imagesInBytes: BinaryNode[] = await renderElementsFromSelection(figma.currentPage.selection);
-    sendImagesToUi(imagesInBytes);
+    sendImagesToBackend(imagesInBytes);
+    
   }
 
   if (msg.type === "close") {
@@ -32,9 +40,9 @@ figma.ui.onmessage = async msg => {
 
     const endTime: number = new Date().getTime();
 
-    console.log(`FIGMA RENAME LAYERS Execution time in Figma: ${endTime - startTime}s`);
+    console.log(`[Figma]: Renaming layer time: ${endTime - startTime}s`);
 
-    figma.closePlugin();
+    //figma.closePlugin();
   }
   
 }
@@ -42,24 +50,61 @@ figma.ui.onmessage = async msg => {
 
 async function renderElementsFromSelection (selection: readonly SceneNode[]) {
 
-  const allSelectedNodes: SceneNode[] = selectAllNodesFromSelection(figma.currentPage.selection, "TEXT");
+  const allSelectedNodes: SceneNode[] | readonly SceneNode[] = selectOnlyTopLevelNodes ? selectOnlyTopLevelNode(figma.currentPage.selection, "TEXT") : selectAllNodesFromSelection(figma.currentPage.selection, "TEXT");
   const binaryNodes: BinaryNode[] = await sceneNodeToBinaryNode(allSelectedNodes);
 
   return binaryNodes;
 }
 
-async function sceneNodeToBinaryNode (sceneNodes: SceneNode[]): Promise<BinaryNode[]> {
+async function sceneNodeToBinaryNode (sceneNodes: SceneNode[] | readonly SceneNode[]): Promise<BinaryNode[]> {
   //Convert a scene node to my custom type: {id: 1, imageDataBytes: <uint8Array>}
 
   let renderedNodes: BinaryNode[] = [];
 
   for (const node of sceneNodes) {
+
+    const baseNodeWidth: number = node.width;
+    const baseNodeHeight: number = node.height;
+    const largestMeasure = Math.max(baseNodeHeight, baseNodeWidth);
+    const ratio = Number(224 / largestMeasure).toFixed(2);
+    const nodeToRender = largestMeasure > 224 ? minifyNode(node, parseFloat(ratio)) : node;
+    const frameTheNodeToRender: SceneNode = frameANode(nodeToRender);
+
     const id: string = node.id;
-    const bytes: Uint8Array = await node.exportAsync({format : "JPG"});
+    //const bytes: Uint8Array = await node.exportAsync({format : "JPG"});
+    const bytes: Uint8Array = await frameTheNodeToRender.exportAsync({format : "JPG"});
     renderedNodes = [...renderedNodes, {nodeId : id, imageDataBytes : bytes}];
+    if (nodeToRender !== node) {
+      nodeToRender.remove();
+    }
+    if (frameTheNodeToRender !== node) {
+      frameTheNodeToRender.remove();
+    }
   }
 
   return renderedNodes;
+}
+
+function minifyNode(node: SceneNode, ratio: number): SceneNode {
+    const minifiedNode: SceneNode = node.clone();
+    minifiedNode.rescale(ratio);
+    return minifiedNode;
+}
+
+function frameANode(node: SceneNode): SceneNode {
+  const frame: FrameNode = figma.createFrame();
+  const child: SceneNode = node.clone();
+  frame.layoutMode = "HORIZONTAL";
+  frame.counterAxisAlignItems = "CENTER";
+  frame.primaryAxisAlignItems = "CENTER";
+  frame.counterAxisSizingMode = "AUTO";
+  frame.primaryAxisSizingMode = "AUTO";
+  child.layoutGrow = 0;
+  frame.insertChild(0, child);
+  frame.resize(224, 224);
+  
+  
+  return frame;
 }
 
 function selectAllNodesFromSelection (selection: readonly SceneNode[], exludeType: string): SceneNode[] {
@@ -84,7 +129,11 @@ function selectAllNodesFromSelection (selection: readonly SceneNode[], exludeTyp
   return nodesWithoutText;
 }
 
-function sendImagesToUi (imagesInBytes: BinaryNode[]) {
-  console.log(`Nodes sent to predictions: ${imagesInBytes.length}`)
+function selectOnlyTopLevelNode(selection: readonly SceneNode[], exludeType: string): readonly SceneNode[] {
+  let selectedNodes: readonly SceneNode[] = selection;
+  return selectedNodes;
+}
+
+function sendImagesToBackend (imagesInBytes: BinaryNode[]) {
   figma.ui.postMessage({type : "processingRequest", data : imagesInBytes}); //Send message to browser API
 }

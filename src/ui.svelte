@@ -8,6 +8,7 @@
   import type PredictionResult from "./interfaces/PredictionResult";
   import type BinaryNode from "./interfaces/BinaryNode";
 
+  import isDebugMode from "src/utils/debugMode";
   
   let isLoading: boolean = false;
   let responseStatus: number;
@@ -29,7 +30,7 @@
         
 
         //Send result to Figma sandbox
-        window.parent.postMessage({pluginMessage : {type : "response", payload : results}}, "*");
+        //window.parent.postMessage({pluginMessage : {type : "response", payload : results}}, "*");
 
         isLoading = false;
 
@@ -53,7 +54,7 @@
 
 
 <svelte:head>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js" type="text/javascript"></script>
+  
 </svelte:head>
 
 <main class="flex flex-col items-center justify-between px-4 py-4 h-full bg-Black">
