@@ -16,10 +16,16 @@
   let responseStatus: number;
   let isOnline: boolean;
   let sampleImage: HTMLImageElement = new Image();
-  let model, labelContainer, maxPredictions;
 
-  onMount(() => {
+  //TM setup
+  const URL = "https://teachablemachine.withgoogle.com/models/7TY9ihr-l/";
+  const modelURL = URL + "model.json";
+  const metadataURL = URL + "metadata.json";
+  let model;
+
+  onMount( async () => {
     isOnline = checkInternetConnection();
+    await init();
   });
 
   const handleClick = () => {
@@ -47,16 +53,7 @@
 
       let results: PredictionResult[] = [];
 
-      //TM PREDICTION SETUP, NO TYPES
-      const URL = "https://teachablemachine.withgoogle.com/models/7TY9ihr-l/";
-      const modelURL = URL + "model.json";
-      const metadataURL = URL + "metadata.json";
-      //@ts-ignore
-      model = await tmImage.load(modelURL, metadataURL);
-      maxPredictions = model.getTotalClasses();
-
       //TM PREDICTION LOOP
-
       for (let node of binaryNodes) {
         const predictedNode: PredictionResult = await predict(node);
         results = [...results, predictedNode];
@@ -71,6 +68,12 @@
       isLoading = false;
     }
   };
+
+  async function init() {
+    //@ts-ignore
+    model = await tmImage.load(modelURL, metadataURL);
+    console.log(`[Svelte]: model ready`);
+  }
 
   async function predict(node: BinaryNode): Promise<PredictionResult> {
 
