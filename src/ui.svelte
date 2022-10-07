@@ -15,7 +15,9 @@
   let emptySelection: boolean = false;
   let responseStatus: number;
   let isOnline: boolean;
+  let isModelReady: boolean = false;
   let sampleImage: HTMLImageElement = new Image();
+  let precision: number = 0.8;
 
   //TM setup
   const URL = "https://teachablemachine.withgoogle.com/models/7TY9ihr-l/";
@@ -71,6 +73,7 @@
   async function init() {
     //@ts-ignore
     model = await tmImage.load(modelURL, metadataURL);
+    isModelReady = true;
     console.log(`[Svelte]: model ready`);
   }
 
@@ -85,11 +88,21 @@
     const prediction: any[] = await model.predict(pixelImage);
     
     let sortedProbabilities = prediction.sort((a, b) => a.probability - b.probability);
+    console.dir(sortedProbabilities);
     let finalist = sortedProbabilities.pop();
 
-    const predictedNode: PredictionResult = {
-      nodeId : node.nodeId,
-      prediction : finalist.className
+    let predictedNode: PredictionResult;
+
+    if (finalist.probability > precision) {
+      predictedNode = {
+        nodeId : node.nodeId,
+        prediction : finalist.className
+      }
+    } else {
+      predictedNode = {
+        nodeId : node.nodeId,
+        prediction : "Container"
+      }
     }
 
     pixelImage.remove();
@@ -127,7 +140,7 @@
 >
   <title-container class="flex flex-col items-center w-full space-y-4">
     <h1 class="text-base font-medium text-white text-center mt-2">
-      Select layers and press "Name"
+      {isModelReady ? `Select layers and press "Name"` : `Please wait the model loading`}
     </h1>
 
     {#if isDebugMode}
@@ -157,12 +170,16 @@
       </magic-wand-container>
     {/if}
 
-    {#if responseStatus > 250}
+    {#if  !isModelReady}
       <button
-        class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs text-white font-medium rounded-md"
-        on:click={closePlugin}
+      class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs cursor-not-allowed grayscale text-white font-medium rounded-md"
       >
-        Close
+        <img
+          src={loadingCircle}
+          alt="Loading circle"
+          class="animate-spin mr-2"
+        />
+        Loading model...
       </button>
     {:else if !isOnline}
       <button
