@@ -4,7 +4,7 @@ import type PredictionResult from "./interfaces/PredictionResult";
 import isDebugMode from "src/utils/debugMode";
 
 //Disable infinite recursivity in nodes or limit it
-const selectOnlyTopLevelNodes: boolean = false;
+const selectOnlyTopLevelNodes: boolean = true;
 const maxSubNodes: number = 3;
 const pluginUiHeight = isDebugMode ? 424 : 216;
 
@@ -26,16 +26,49 @@ figma.ui.onmessage = async msg => {
   }
 
   if (msg.type === "response") {
-    const nodesToRename: SceneNode[] = selectAllNodesFromSelection(figma.currentPage.selection, ["TEXT"]);
+
+    const nodesToRename: SceneNode[] = selectAllNodesFromSelection(figma.currentPage.selection, ["TEXT", "VECTOR"]);
     const msgPayload: PredictionResult[] = msg.payload;
     
     const startTime:  number = new Date().getTime();
 
     for (const node of nodesToRename) {
-      for (let predictionResult of msgPayload) { //figma.findNodeById(id) existe aussi
+      node.name = "Frame"; //Rename all node "Frame" before renaming to avoid conflicts in exceptions
+      for (let predictionResult of msgPayload) { //figma.findNodeById(id) existe too
         if (node.id === predictionResult.nodeId) {
           node.name = predictionResult.prediction;
         }
+      }
+
+
+      /*
+      **********
+      EXCEPTIONS HANDLING
+      Must correct node.name & parent.name references here if classes names changes in the model
+      **********
+      */
+
+      //Handle image node naming
+      if (node.type === "RECTANGLE") {
+        const fills: readonly Paint[] | typeof figma.mixed = node.fills;
+        if (fills[0].type === "IMAGE") {
+          node.name = "Image"
+        }
+      }
+      //Handle text only container naming
+      if (node.type === "FRAME" || node.type === "GROUP") {
+        const children: SceneNode[] = node.findAll();
+        if (children.length > 1) {
+          const areChildrenAllTextNodes: boolean = children.every((node) => node.type === "TEXT");
+          if (areChildrenAllTextNodes) {
+            node.name = "Paragraph container";
+          }
+        }
+      }
+      //Handle container naming
+      const parent: BaseNode & ChildrenMixin = node.parent;
+      if (parent.name === node.name && parent.name !== "Container" && parent.name !== "Card" && parent.name !== "Horizontal container" && parent.name !== "Vertical container") {
+        parent.name = `${node.name} container`;
       }
     }
 

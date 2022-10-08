@@ -17,7 +17,7 @@
   let isOnline: boolean;
   let isModelReady: boolean = false;
   let sampleImage: HTMLImageElement = new Image();
-  let precision: number = 0.8;
+  let precision: number = 0.45;
 
   //TM setup
   const URL = "https://teachablemachine.withgoogle.com/models/7TY9ihr-l/";
@@ -60,8 +60,10 @@
         results = [...results, predictedNode];
       }
 
-      console.log(`[Svelte]: prediction results`);
-      console.log(results);
+      if (isDebugMode) {
+        console.log(`[Svelte]: prediction results:`);
+        console.log(results);
+      }
 
       //Send result to Figma sandbox
       window.parent.postMessage({pluginMessage : {type : "response", payload : results}}, "*");
@@ -74,7 +76,9 @@
     //@ts-ignore
     model = await tmImage.load(modelURL, metadataURL);
     isModelReady = true;
-    console.log(`[Svelte]: model ready`);
+    if (isDebugMode) {
+      console.log(`[Svelte]: Model ready`);
+    }
   }
 
   async function predict(node: BinaryNode): Promise<PredictionResult> {
@@ -88,8 +92,12 @@
     const prediction: any[] = await model.predict(pixelImage);
     
     let sortedProbabilities = prediction.sort((a, b) => a.probability - b.probability);
-    console.dir(sortedProbabilities);
-    let finalist = sortedProbabilities.pop();
+
+    if (isDebugMode) {
+      console.log(sortedProbabilities);
+    }
+
+    let finalist = sortedProbabilities[sortedProbabilities.length - 1];
 
     let predictedNode: PredictionResult;
 
@@ -117,15 +125,15 @@
   function checkInternetConnection(): boolean {
     let isOnline: boolean;
     isOnline = navigator.onLine ? true : false;
-    console.log(
-      `[Svelte]: Connection status: ${isOnline ? "Online" : "Offline"}`
-    );
+    if (isDebugMode) {
+      console.log(`[Svelte]: ${isOnline ? "Online" : "Offline"}`);
+    }
     return isOnline;
   }
 
   async function renderUint8ArrayToImage(bytes: Uint8Array): Promise<HTMLImageElement> {
     const newImage = new Image(224, 224);
-    const base64Data = btoa(String.fromCharCode.apply(null, bytes)); //No Buffer.from(bytes).toString('base64'); cause we are not in Node
+    const base64Data = btoa(String.fromCharCode.apply(null, bytes)); //No Buffer.from(bytes).toString('base64'); cause we are not in Node JS
     newImage.src = "data:image/png;base64," + base64Data;
     return newImage;
   }
@@ -197,6 +205,7 @@
     {:else}
       <button
         class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs text-white font-medium rounded-md"
+        class:cursor-not-allowed={isLoading}
         on:click={handleClick}
       >
         {#if isLoading}

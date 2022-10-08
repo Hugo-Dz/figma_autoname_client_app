@@ -1,3 +1,3 @@
-const isDebugMode: boolean = false;
+const isDebugMode: boolean = true;
 
 export default isDebugMode;
