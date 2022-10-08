@@ -174,7 +174,7 @@
       <p class="text-xs text-white font-medium mb-4">Non authorized :/</p>
     {:else if !isDebugMode}
       <magic-wand-container class="p-4 rounded-full flex flex-col items-center justify-center m-6">
-        <img src={magicWand} alt="Magic wand icon" class="-translate-x-[3px] translate-y-[2px]"/>
+        <img src={magicWand} alt="Magic wand icon" class="-translate-x-[3px] translate-y-[2px] h-10 w-10"/>
       </magic-wand-container>
     {/if}
 
