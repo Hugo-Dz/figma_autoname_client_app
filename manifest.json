@@ -1,7 +1,7 @@
 {
   "name": "Figma Autoname",
+  "id": "1160642826057169962",
   "editorType" : ["figma"],
-  "id": "",
   "api": "1.0.0",
   "main": "public/code.js",
   "ui": "public/index.html"
