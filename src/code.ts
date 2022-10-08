@@ -4,7 +4,7 @@ import type PredictionResult from "./interfaces/PredictionResult";
 import isDebugMode from "src/utils/debugMode";
 
 //Disable infinite recursivity in nodes or limit it
-const selectOnlyTopLevelNodes: boolean = true;
+const selectOnlyTopLevelNodes: boolean = false;
 const maxSubNodes: number = 3;
 const pluginUiHeight = isDebugMode ? 424 : 216;
 
