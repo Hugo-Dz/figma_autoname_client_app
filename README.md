@@ -1,5 +1,5 @@
 
-![Cover image](https://i.ibb.co/YQ6Vgw0/cover-Image.png)
+![Cover image](https://i.ibb.co/f9zw4j0/showcase.png)
 
 # 🪄 Figma Autoname plugin
 
