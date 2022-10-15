@@ -89,8 +89,6 @@ Contributions are welcome! You can contribute by many ways :)
 If you want to dive into the code and suggest changes, please refer to
 [this](https://opensource.guide/how-to-contribute/#opening-a-pull-request).
 
-And don't forget to adhere to this project's `code of conduct`.
-
 
 ## 🍕 Community
 
