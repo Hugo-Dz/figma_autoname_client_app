@@ -1,5 +1,5 @@
 
-![Cover image](https://i.ibb.co/nBCj94B/Square-cover.png)
+![Cover image](https://i.ibb.co/YQ6Vgw0/cover-Image.png)
 
 # 🪄 Figma Autoname plugin
 
@@ -103,7 +103,7 @@ Special thanks to [Tom Quinonero](https://github.com/tomquinonero) for the Svelt
 For support, email duprez.hugo@gmail.com.
 
 
-## License
+## ⚖️ License
 
 [MIT](https://choosealicense.com/licenses/mit/) Copyright © 2022 Hugo Duprez
 
