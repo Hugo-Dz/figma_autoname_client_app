@@ -8,7 +8,7 @@ to rename too. This plugin is an experiment to solve your problem right here, ri
 [Hugo](https://www.hugoduprez.com/),
 the usage of the plugin is completely free. The code is Open Source, that way all designers and developers can make
 it better and finally, have more pleasure doing their work.
-## Sponsors
+## 🚀 Sponsors
 
 Figma Autoname is an MIT-licensed open source project with its ongoing development made possible entirely by the support of these awesome
 backers. If you'd like to join them, please consider sponsor Figma Autoname development.
