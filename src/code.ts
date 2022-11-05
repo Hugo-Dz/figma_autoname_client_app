@@ -27,7 +27,8 @@ figma.ui.onmessage = async msg => {
 
   if (msg.type === "response") {
 
-    const nodesToRename: SceneNode[] = selectAllNodesFromSelection(figma.currentPage.selection, ["TEXT", "VECTOR"]);
+    const excludedTypes: NodeType[] = ["TEXT", "VECTOR", "COMPONENT", "COMPONENT_SET", "INSTANCE"];
+    const nodesToRename: SceneNode[] = selectAllNodesFromSelection(figma.currentPage.selection, excludedTypes);
     const msgPayload: PredictionResult[] = msg.payload;
     
     const startTime:  number = new Date().getTime();
@@ -88,7 +89,8 @@ figma.ui.onmessage = async msg => {
 
 async function renderElementsFromSelection (selection: readonly SceneNode[]) {
 
-  const allSelectedNodes: SceneNode[] | readonly SceneNode[] = selectOnlyTopLevelNodes ? selectOnlyTopLevelNode(figma.currentPage.selection) : selectAllNodesFromSelection(figma.currentPage.selection, ["TEXT", "VECTOR"]);
+  const excludedTypes: NodeType[] = ["TEXT", "VECTOR", "COMPONENT", "COMPONENT_SET", "INSTANCE"];
+  const allSelectedNodes: SceneNode[] | readonly SceneNode[] = selectOnlyTopLevelNodes ? selectOnlyTopLevelNode(figma.currentPage.selection) : selectAllNodesFromSelection(figma.currentPage.selection, excludedTypes);
   const binaryNodes: BinaryNode[] = await sceneNodeToBinaryNode(allSelectedNodes);
 
   return binaryNodes;
@@ -146,7 +148,7 @@ function frameANode(node: SceneNode): SceneNode {
   return frame;
 }
 
-function selectAllNodesFromSelection (selection: readonly SceneNode[], excludeTypes: string[]): SceneNode[] {
+function selectAllNodesFromSelection (selection: readonly SceneNode[], excludeTypes: NodeType[]): SceneNode[] {
 
   let selectedNodes: SceneNode[] = [];
   let childrenFromSelectedNodes = [];
