@@ -6,7 +6,7 @@ import isDebugMode from "src/utils/debugMode";
 //Disable infinite recursivity in nodes or limit it
 const selectOnlyTopLevelNodes: boolean = false;
 const maxSubNodes: number = 3;
-const pluginUiHeight = isDebugMode ? 424 : 216;
+const pluginUiHeight = isDebugMode ? 500 : 280;
 
 
 figma.showUI(__html__, {height: pluginUiHeight});
