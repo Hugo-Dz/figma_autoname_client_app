@@ -19,6 +19,9 @@
   let sampleImage: HTMLImageElement = new Image();
   let precision: number = 0.45;
 
+  //Badge note
+  const versionNote: string = "Components & instances are no longer automatically renamed 🎉";
+
   //TM setup
   const URL = "https://teachablemachine.withgoogle.com/models/7TY9ihr-l/";
   const modelURL = URL + "model.json";
@@ -147,6 +150,9 @@
   class="flex flex-col items-center justify-between px-4 py-4 h-full bg-[#2C2C2C]"
 >
   <title-container class="flex flex-col items-center w-full space-y-4">
+
+    <p class="text-xs text-slate-50 w-full px-3 py-2 border-[1px] border-slate-600 border-opacity-40 rounded-md bg-slate-600 bg-opacity-30">What's new: {versionNote}</p>
+
     <h1 class="text-base font-medium text-white text-center mt-2">
       {isModelReady ? `Select layers and press "Name"` : `Please wait the model loading`}
     </h1>
