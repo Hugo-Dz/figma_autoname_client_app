@@ -10,6 +10,8 @@ the usage of the plugin is completely free. The code is Open Source, that way al
 it better and finally, have more pleasure doing their work.
 ## 🚀 Sponsors
 
+[Hugging Face](https://huggingface.co/)
+
 Figma Autoname is an MIT-licensed open source project with its ongoing development made possible entirely by the support of these awesome
 backers. If you'd like to join them, please consider sponsor Figma Autoname development.
 
