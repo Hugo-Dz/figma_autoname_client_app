@@ -1,14 +1,19 @@
-import type BinaryNode from "./interfaces/BinaryNode"
+import type BinaryNode from "./interfaces/BinaryNode";
 import type PredictionResult from "./interfaces/PredictionResult";
 
 import isDebugMode from "src/utils/debugMode";
+import toAndroidResourceName from "src/utils/toAndroidResourceName";
 
 //Disable infinite recursivity in nodes or limit it
 const selectOnlyTopLevelNodes: boolean = false;
 const maxSubNodes: number = 3;
 const pluginUiHeight = isDebugMode ? 500 : 280;
 
+const defaultModel: string =
+  "https://teachablemachine.withgoogle.com/models/7TY9ihr-l/";
+const filename: string = toAndroidResourceName(figma.root.name);
 
+// Start the plugin UI
 figma.showUI(__html__, {height: pluginUiHeight});
 
 
@@ -30,8 +35,8 @@ figma.ui.onmessage = async msg => {
     const excludedTypes: NodeType[] = ["TEXT", "VECTOR", "COMPONENT", "COMPONENT_SET", "INSTANCE"];
     const nodesToRename: SceneNode[] = selectAllNodesFromSelection(figma.currentPage.selection, excludedTypes);
     const msgPayload: PredictionResult[] = msg.payload;
-    
-    const startTime:  number = new Date().getTime();
+
+    const startTime: number = new Date().getTime();
 
     for (const node of nodesToRename) {
       node.name = "Frame"; //Rename all node "Frame" before renaming to avoid conflicts in exceptions
@@ -53,7 +58,7 @@ figma.ui.onmessage = async msg => {
       if (node.type === "RECTANGLE") {
         const fills: readonly Paint[] | typeof figma.mixed = node.fills;
         if (fills[0].type === "IMAGE") {
-          node.name = "Image"
+          node.name = "Image";
         }
       }
       //Handle text only container naming
@@ -83,12 +88,48 @@ figma.ui.onmessage = async msg => {
   if (msg.type === "close") {
     figma.closePlugin();
   }
-  
-}
 
+  // If "init" msg type, check the Client Storage and send the model URL to the UI
+  if (msg.type === "init") {
+    // get current model from Client Storage
+    // if no current model, use defaultModel
+
+    let current_model: string = await figma.clientStorage.getAsync(filename);
+    if (!current_model) {
+      current_model = defaultModel;
+    }
+    console.log("current_model: ", current_model);
+
+    // send current model to UI
+
+    figma.ui.postMessage({
+      type: "modelURL",
+      payload: current_model,
+    });
+  }
+
+  // if "resetModelURL" msg type, remove current_model from Client Storage and send the default model URL to the UI
+  if (msg.type === "resetModelURL") {
+    // remove current model from Client Storage
+    await figma.clientStorage.setAsync(filename, "");
+    // send default model to UI
+    figma.ui.postMessage({
+      type: "modelURL",
+      payload: defaultModel,
+    });
+  }
+
+  // if "updateModelURL" msg type, console.log msg and payload
+  if (msg.type === "updateModelURL") {
+    // update Client Storage
+    await figma.clientStorage.setAsync(filename, msg.payload);
+    figma.notify("Changes to the TFJS model have been saved.", {
+      timeout: 1000,
+    });
+  }
+};
 
 async function renderElementsFromSelection (selection: readonly SceneNode[]) {
-
   const excludedTypes: NodeType[] = ["TEXT", "VECTOR", "COMPONENT", "COMPONENT_SET", "INSTANCE"];
   const allSelectedNodes: SceneNode[] | readonly SceneNode[] = selectOnlyTopLevelNodes ? selectOnlyTopLevelNode(figma.currentPage.selection) : selectAllNodesFromSelection(figma.currentPage.selection, excludedTypes);
   const binaryNodes: BinaryNode[] = await sceneNodeToBinaryNode(allSelectedNodes);
@@ -102,7 +143,6 @@ async function sceneNodeToBinaryNode (sceneNodes: SceneNode[] | readonly SceneNo
   let renderedNodes: BinaryNode[] = [];
 
   for (const node of sceneNodes) {
-
     const baseNodeWidth: number = node.width;
     const baseNodeHeight: number = node.height;
     const largestMeasure = Math.max(baseNodeHeight, baseNodeWidth);
@@ -126,9 +166,9 @@ async function sceneNodeToBinaryNode (sceneNodes: SceneNode[] | readonly SceneNo
 }
 
 function minifyNode(node: SceneNode, ratio: number): SceneNode {
-    const minifiedNode: SceneNode = node.clone();
-    minifiedNode.rescale(ratio);
-    return minifiedNode;
+  const minifiedNode: SceneNode = node.clone();
+  minifiedNode.rescale(ratio);
+  return minifiedNode;
 }
 
 function frameANode(node: SceneNode): SceneNode {
@@ -139,7 +179,7 @@ function frameANode(node: SceneNode): SceneNode {
   frame.primaryAxisAlignItems = "CENTER";
   frame.counterAxisSizingMode = "FIXED";
   frame.primaryAxisSizingMode = "FIXED";
-  child.layoutAlign = "INHERIT"
+  child.layoutAlign = "INHERIT";
   child.layoutGrow = 0;
   frame.insertChild(0, child);
   frame.resize(224, 224);
@@ -159,7 +199,7 @@ function selectAllNodesFromSelection (selection: readonly SceneNode[], excludeTy
       const children: SceneNode[] = node.findAll();
       childrenFromSelectedNodes = [...childrenFromSelectedNodes, children];
     }
-  })
+  });
 
   const mergedChildrenFromSelectednodes: SceneNode[] = [].concat.apply([], childrenFromSelectedNodes);
   const selectedNodesAndAllChildren: SceneNode[] = selectedNodes.concat(mergedChildrenFromSelectednodes);
