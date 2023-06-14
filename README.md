@@ -20,6 +20,7 @@ backers. If you'd like to join them, please consider sponsor Figma Autoname deve
 
 - Rename selected layers and their child.
 - Optional start in debug mode.
+- Change the model URL.
 
 
 
@@ -77,6 +78,22 @@ also some log information about the prediction process in the Figma console.
 
 By default the image displayed is the last in the the child tree of selected nodes. If you want to see only the selected frame,
 got to `src`/`code.ts` and change the variable `selectOnlyTopLevelNodes` value to `true`.
+
+## ⚙️ Change the model URL
+
+![Change model URL interface](./images/changeModel.png)
+
+To change the TFJS model, please click on the ⚙ button Iand enter the new model URL. The model must have both the model.json and metadata.json file in the root.
+
+```
+https://teachablemachine.withgoogle.com/models/<your-model>/
+├─ model.json
+├─ metadata.json
+└─ ...
+```
+
+To reset the model URL, please click on the ↻ reset button. 
+
 ## 🤝 Contributing
 
 Contributions are welcome! You can contribute by many ways :)
@@ -90,6 +107,13 @@ Contributions are welcome! You can contribute by many ways :)
 
 If you want to dive into the code and suggest changes, please refer to
 [this](https://opensource.guide/how-to-contribute/#opening-a-pull-request).
+
+
+
+## 📝 Troubleshooting
+
+- npm install fails with error code 1: [link](https://github.com/Hugo-Dz/figma_autoname_client_app/issues/4)
+- ...
 
 
 ## 🍕 Community
