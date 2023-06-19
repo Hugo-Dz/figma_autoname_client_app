@@ -237,6 +237,11 @@
         class="text-xs text-slate-50 w-full font-medium mb-4 px-3 py-2 border-[1px] border-slate-600 border-opacity-40 rounded-md bg-slate-600 bg-opacity-30"
         value={URL}
       />
+      <!-- The Model Reset Button  -->
+      <button
+      class="flex flex-row justify-center items-center text-white font-large rounded-md px-3 py-[7px] bg-Grey"
+      on:click={handleModelReset}>↻ Reset</button
+    >
     {:else if isDebugMode}
       <!--DebugMode-->
     {:else}
@@ -275,11 +280,7 @@
         >
           Update a model
         </button>
-        <!-- The Model Reset Button  -->
-        <button
-          class="flex flex-row justify-center items-center text-white font-large rounded-md px-3 py-[7px] bg-Grey"
-          on:click={handleModelReset}>↻</button
-        >
+        
         <button
           on:click={handleSettingsClick}
           class="flex flex-row justify-center items-center text-white font-large rounded-md px-3 py-[7px] bg-Grey"
@@ -326,6 +327,7 @@
           {/if}
           {isLoading ? `Processing...` : `Name`}
         </button>
+        
         <button
           on:click={handleSettingsClick}
           class="flex flex-row justify-center items-center text-white font-large rounded-md px-3 py-[7px] bg-Grey"
