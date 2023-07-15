@@ -1,340 +1,345 @@
 <script lang="ts">
-  import "./app.css";
-  import magicWand from "./lib//assets/magicWand.svg";
-  import loadingCircle from "./lib/assets/loadingCircle.svg";
-  import { Textarea } from "figma-plugin-ds-svelte";
+  // Style
+	import "./app.css";
 
-  import { onMount } from "svelte";
+  // Icons and images
+	import magicWand from "./lib//assets/magicWand.svg";
+	import loadingCircle from "./lib/assets/loadingCircle.svg";
+	import settingsIcon from "./lib/assets/settings-icon.svg";
+	import homeIcon from "./lib/assets/home-icon.svg";
+  import previousIcon from "./lib/assets/previous-icon.svg";
 
-  import type BinaryNodeJson from "./interfaces/BinaryNodeJson";
-  import type PredictionResult from "./interfaces/PredictionResult";
-  import type BinaryNode from "./interfaces/BinaryNode";
+	import { Textarea } from "figma-plugin-ds-svelte";
 
-  import isDebugMode from "src/utils/debugMode";
+  // Svelte
+	import { onMount } from "svelte";
 
-  let isLoading: boolean = false;
-  let emptySelection: boolean = false;
-  let responseStatus: number;
-  let isOnline: boolean;
-  let isModelReady: boolean = false;
-  let sampleImage: HTMLImageElement = new Image();
-  let precision: number = 0.45;
-  let isSettingMode: boolean = false;
-  let URL: string = "";
+  // Types
+	import type BinaryNodeJson from "./interfaces/BinaryNodeJson";
+	import type PredictionResult from "./interfaces/PredictionResult";
+	import type BinaryNode from "./interfaces/BinaryNode";
 
-  //TM setup
-  let model;
+  // Utils
+	import isDebugMode from "src/utils/debugMode";
 
-  //Badge note
-  const versionNote: string = "Components & instances are no longer automatically renamed 🎉";
+  // Variables
+	let isLoading: boolean = false;
+	let emptySelection: boolean = false;
+	let responseStatus: number;
+	let isOnline: boolean;
+	let isModelReady: boolean = false;
+	let sampleImage: HTMLImageElement = new Image();
+	let precision: number = 0.45;
+	let isSettingMode: boolean = false;
+	let URL: string = "";
 
-  onMount(async () => {
-    isOnline = checkInternetConnection();
+	//TM setup
+	let model;
 
-    // post message to sandbox to get the model URL
-    parent.postMessage({ pluginMessage: { type: "init" } }, "*");
-  });
+	//Badge note
+	const versionNote: string = "Components & instances are no longer automatically renamed 🎉";
 
-  const handleClick = () => {
-    isLoading = true;
-    parent.postMessage({ pluginMessage: { type: "clickPredictButton" } }, "*");
-  };
+	onMount(async () => {
+		isOnline = checkInternetConnection();
 
-  //If setting pannel, close it. If not, open it.
-  const handleSettingsClick = () => {
-    isSettingMode = !isSettingMode;
-  };
+		// post message to sandbox to get the model URL
+		parent.postMessage({ pluginMessage: { type: "init" } }, "*");
+	});
 
-  // Validation of the model URL entered by the user
-  const validateURL = (url: string): boolean => {
-    const regex = new RegExp(/^(http|https):\/\/[^ "]+\/$/);
-    return regex.test(url);
-  };
+	const handleClick = () => {
+		isLoading = true;
+		parent.postMessage({ pluginMessage: { type: "clickPredictButton" } }, "*");
+	};
 
-  //Submit the new model URL and set in local storage via Figma plugin API.
-  const handleModelSubmit = () => {
-    let newModelURL = document.querySelector("textarea").value;
+	//If setting pannel, close it. If not, open it.
+	const handleSettingsClick = () => {
+		isSettingMode = !isSettingMode;
+	};
 
-    // If the URL is not ended by a slash, add it
-    if (!newModelURL.endsWith("/")) {
-      newModelURL += "/";
-    }
-    // If the URL is not valid, alert the user
-    if (!validateURL(newModelURL)) {
-      alert("Please enter a valid URL");
-      return;
-    } else {
-      // If the URL is valid, sent to the sandbox API to save it in local storage
-      parent.postMessage(
-        { pluginMessage: { type: "updateModelURL", payload: newModelURL } },
-        "*"
-      );
+	// Validation of the model URL entered by the user
+	const validateURL = (url: string): boolean => {
+		const regex = new RegExp(/^(http|https):\/\/[^ "]+\/$/);
+		return regex.test(url);
+	};
 
-      // And update tmSetup
-      init(newModelURL + "model.json", newModelURL + "metadata.json");
-    }
+	//Submit the new model URL and set in local storage via Figma plugin API.
+	const handleModelSubmit = () => {
+		let newModelURL = document.querySelector("textarea").value;
 
-    // Close the settings pannel
-    isSettingMode = false;
-    isModelReady = false;
-  };
+		// If the URL is not ended by a slash, add it
+		if (!newModelURL.endsWith("/")) {
+			newModelURL += "/";
+		}
+		// If the URL is not valid, alert the user
+		if (!validateURL(newModelURL)) {
+			alert("Please enter a valid URL");
+			return;
+		} else {
+			// If the URL is valid, sent to the sandbox API to save it in local storage
+			parent.postMessage({ pluginMessage: { type: "updateModelURL", payload: newModelURL } }, "*");
 
-  // Reset the model URL and set to initial value
-  const handleModelReset = () => {
-    // post message to sandbox to restore the current model value
-    parent.postMessage({ pluginMessage: { type: "resetModelURL" } }, "*");
-  };
+			// And update tmSetup
+			init(newModelURL + "model.json", newModelURL + "metadata.json");
+		}
 
-  //Handle the demand from the sandbox API to make a network request when the order is recieved
-  window.onmessage = async (event) => {
-    if (event.data.pluginMessage.type === "emptySelection") {
-      emptySelection = true;
-    }
+		// Close the settings pannel
+		isSettingMode = false;
+		isModelReady = false;
+	};
 
-    if (event.data.pluginMessage.type === "processingRequest") {
-      emptySelection = false;
+	// Reset the model URL and set to initial value
+	const handleModelReset = () => {
+		// post message to sandbox to restore the current model value
+		parent.postMessage({ pluginMessage: { type: "resetModelURL" } }, "*");
+	};
 
-      const binaryNodes: BinaryNode[] = event.data.pluginMessage.data;
+	//Handle the demand from the sandbox API to make a network request when the order is recieved
+	window.onmessage = async (event) => {
+		if (event.data.pluginMessage.type === "emptySelection") {
+			emptySelection = true;
+		}
 
-      if (isDebugMode) {
-        sampleImage = await renderUint8ArrayToImage(binaryNodes[0].imageDataBytes);
-      }
+		if (event.data.pluginMessage.type === "processingRequest") {
+			emptySelection = false;
 
-      let results: PredictionResult[] = [];
+			const binaryNodes: BinaryNode[] = event.data.pluginMessage.data;
 
-      //TM PREDICTION LOOP
-      for (let node of binaryNodes) {
-        const predictedNode: PredictionResult = await predict(node);
-        results = [...results, predictedNode];
-      }
+			if (isDebugMode) {
+				sampleImage = await renderUint8ArrayToImage(binaryNodes[0].imageDataBytes);
+			}
 
-      if (isDebugMode) {
-        console.log(`[Svelte]: prediction results:`);
-        console.log(results);
-      }
+			let results: PredictionResult[] = [];
 
-      //Send result to Figma sandbox
-      window.parent.postMessage({pluginMessage : {type : "response", payload : results}}, "*");
+			//TM PREDICTION LOOP
+			for (let node of binaryNodes) {
+				const predictedNode: PredictionResult = await predict(node);
+				results = [...results, predictedNode];
+			}
 
-      isLoading = false;
-    }
-    // if the model URL is recieved, init the model and close setting pannel
-    if (event.data.pluginMessage.type === "modelURL") {
-      URL = event.data.pluginMessage.payload;
-      init(URL + "model.json", URL + "metadata.json");
+			if (isDebugMode) {
+				console.log(`[Svelte]: prediction results:`);
+				console.log(results);
+			}
 
-      isSettingMode = false;
-    }
-  };
+			//Send result to Figma sandbox
+			window.parent.postMessage({ pluginMessage: { type: "response", payload: results } }, "*");
 
-  async function init(modelURL: string, metadataURL: string) {
-    //@ts-ignore
-    model = await tmImage.load(modelURL, metadataURL);
-    isModelReady = true;
-    if (isDebugMode) {
-      console.log(`[Svelte]: Model ready`, modelURL);
-    }
-  }
+			isLoading = false;
+		}
+		// if the model URL is recieved, init the model and close setting pannel
+		if (event.data.pluginMessage.type === "modelURL") {
+			URL = event.data.pluginMessage.payload;
+			init(URL + "model.json", URL + "metadata.json");
 
-  async function predict(node: BinaryNode): Promise<PredictionResult> {
-    const pixelImage: HTMLImageElement = await renderUint8ArrayToImage(node.imageDataBytes);
+			isSettingMode = false;
+		}
+	};
 
-    if (isDebugMode) {
-      sampleImage = pixelImage;
-    }
+	async function init(modelURL: string, metadataURL: string) {
+		//@ts-ignore
+		model = await tmImage.load(modelURL, metadataURL);
+		isModelReady = true;
+		if (isDebugMode) {
+			console.log(`[Svelte]: Model ready`, modelURL);
+		}
+	}
 
-    const prediction: any[] = await model.predict(pixelImage);
+	async function predict(node: BinaryNode): Promise<PredictionResult> {
+		const pixelImage: HTMLImageElement = await renderUint8ArrayToImage(node.imageDataBytes);
 
-    let sortedProbabilities = prediction.sort((a, b) => a.probability - b.probability);
+		if (isDebugMode) {
+			sampleImage = pixelImage;
+		}
 
-    if (isDebugMode) {
-      console.log(sortedProbabilities);
-    }
+		const prediction: any[] = await model.predict(pixelImage);
 
-    let finalist = sortedProbabilities[sortedProbabilities.length - 1];
+		let sortedProbabilities = prediction.sort((a, b) => a.probability - b.probability);
 
-    let predictedNode: PredictionResult;
+		if (isDebugMode) {
+			console.log(sortedProbabilities);
+		}
 
-    if (finalist.probability > precision) {
-      predictedNode = {
-        nodeId: node.nodeId,
-        prediction: finalist.className,
-      };
-    } else {
-      predictedNode = {
-        nodeId: node.nodeId,
-        prediction: "Container",
-      };
-    }
+		let finalist = sortedProbabilities[sortedProbabilities.length - 1];
 
-    pixelImage.remove();
+		let predictedNode: PredictionResult;
 
-    return predictedNode;
-  }
+		if (finalist.probability > precision) {
+			predictedNode = {
+				nodeId: node.nodeId,
+				prediction: finalist.className,
+			};
+		} else {
+			predictedNode = {
+				nodeId: node.nodeId,
+				prediction: "Container",
+			};
+		}
 
-  function closePlugin(): void {
-    window.parent.postMessage({ pluginMessage: { type: "close" } }, "*");
-  }
+		pixelImage.remove();
 
-  function checkInternetConnection(): boolean {
-    let isOnline: boolean;
-    isOnline = navigator.onLine ? true : false;
-    if (isDebugMode) {
-      console.log(`[Svelte]: ${isOnline ? "Online" : "Offline"}`);
-    }
-    return isOnline;
-  }
+		return predictedNode;
+	}
 
-  async function renderUint8ArrayToImage(bytes: Uint8Array): Promise<HTMLImageElement> {
-    const newImage = new Image(224, 224);
-    const base64Data = btoa(String.fromCharCode.apply(null, bytes)); //No Buffer.from(bytes).toString('base64'); cause we are not in Node JS
-    newImage.src = "data:image/png;base64," + base64Data;
-    return newImage;
-  }
+	function closePlugin(): void {
+		window.parent.postMessage({ pluginMessage: { type: "close" } }, "*");
+	}
+
+	function checkInternetConnection(): boolean {
+		let isOnline: boolean;
+		isOnline = navigator.onLine ? true : false;
+		if (isDebugMode) {
+			console.log(`[Svelte]: ${isOnline ? "Online" : "Offline"}`);
+		}
+		return isOnline;
+	}
+
+	async function renderUint8ArrayToImage(bytes: Uint8Array): Promise<HTMLImageElement> {
+		const newImage = new Image(224, 224);
+		const base64Data = btoa(String.fromCharCode.apply(null, bytes)); //No Buffer.from(bytes).toString('base64'); cause we are not in Node JS
+		newImage.src = "data:image/png;base64," + base64Data;
+		return newImage;
+	}
 </script>
 
 <svelte:head />
 
-<main
-  class="flex flex-col items-center justify-between px-4 py-4 h-full bg-[#2C2C2C]"
->
-  <title-container class="flex flex-col items-center w-full space-y-4">
-    <p class="text-xs text-slate-50 w-full px-3 py-2 border-[1px] border-slate-600 border-opacity-40 rounded-md bg-slate-600 bg-opacity-30">What's new: {versionNote}</p>
+<main class="flex flex-col items-center justify-between px-4 py-4 h-full bg-[#2C2C2C]">
+	<div class="flex flex-col items-center w-full space-y-4 h-full">
+		<p
+			class="text-xs text-slate-50 w-full px-3 py-2 border-[1px] border-slate-600 border-opacity-40 rounded-md bg-slate-600 bg-opacity-30"
+		>
+			What's new: {versionNote}
+		</p>
 
-    <h1 class="text-base font-medium text-white text-center mt-2">
-      {#if isSettingMode}
-        Set a new model URL
-      {:else if !isModelReady}
-        Please wait the model loading
-      {:else}
-        Select layers and press "Name"
-      {/if}
-    </h1>
+		<div class="text-base font-normal text-white text-center h-full mt-2 w-full">
+			{#if isSettingMode}
+				<div class="flex flex-col justify-center items-center w-full space-y-2 h-full">
+					<div class="flex flex-row justify-between items-center w-full">
+						<p>Set a new model URL</p>
+						<!-- The Model Reset Button  -->
+						<button class="flex flex-row justify-center items-center" on:click={handleModelReset}>
+              <img src={previousIcon} alt="Previous icon" height="14" width="14">
+            </button>
+					</div>
+					<Textarea
+						class="text-xs h-full text-slate-50 w-full font-medium mb-4 border-[1px] border-slate-600 border-opacity-40 rounded-md bg-slate-600 bg-opacity-30"
+						value={URL}
+					/>
+				</div>
+			{:else if !isModelReady}
+				Please wait the model loading
+			{:else}
+				Select layers and press "Name"
+			{/if}
+		</div>
 
-    {#if isDebugMode}
-      <p
-        class="text-gray-400 text-xs px-2 py-1 border-[1px] w-fit border-gray-400 rounded"
-      >
-        Debug mode
-      </p>
-      <p class="text-gray-400 justify-center text-xs">
-        Image sent to the model 👇
-      </p>
-      <img
-        src={sampleImage.src}
-        alt="Pixels sent to the model"
-        bind:this={sampleImage}
-        class="rounded-md"
-      />
-    {/if}
-  </title-container>
+		{#if isDebugMode}
+			<p class="text-gray-400 text-xs px-2 py-1 border-[1px] w-fit border-gray-400 rounded">Debug mode</p>
+			<p class="text-gray-400 justify-center text-xs">Image sent to the model 👇</p>
+			<img src={sampleImage.src} alt="Pixels sent to the model" bind:this={sampleImage} class="rounded-md" />
+		{/if}
+	</div>
 
-  <body-container class="flex flex-col w-full items-center">
-    {#if responseStatus === 401}
-      <p class="text-xs text-white font-medium mb-4">Non authorized :/</p>
-    {:else if isSettingMode}
-      <Textarea
-        class="text-xs text-slate-50 w-full font-medium mb-4 px-3 py-2 border-[1px] border-slate-600 border-opacity-40 rounded-md bg-slate-600 bg-opacity-30"
-        value={URL}
-      />
-      <!-- The Model Reset Button  -->
-      <button
-      class="flex flex-row justify-center items-center text-white font-large rounded-md px-3 py-[7px] bg-Grey"
-      on:click={handleModelReset}>↻ Reset</button
-    >
-    {:else if isDebugMode}
-      <!--DebugMode-->
-    {:else}
-      <magic-wand-container
-        class="p-4 rounded-full flex flex-col items-center justify-center m-6"
-      >
-        <img
-          src={magicWand}
-          alt="Magic wand icon"
-          class="-translate-x-[3px] translate-y-[2px] h-10 w-10"
-        />
-      </magic-wand-container>
-    {/if}
-    <button-container class="flex w-full items-center">
-      {#if !isModelReady}
-        <button
-          class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs cursor-not-allowed grayscale text-white font-medium rounded-md"
-        >
-          <img
-            src={loadingCircle}
-            alt="Loading circle"
-            class="animate-spin mr-2"
-          />
-          Loading model...
-        </button>
-        <button
-          on:click={handleSettingsClick}
-          class="flex flex-row justify-center items-center text-white font-large rounded-md px-3 py-[7px] bg-Grey"
-        >
-          {#if isSettingMode}Ⅹ{:else}⚙{/if}</button
-        >
-      {:else if isSettingMode}
-        <button
-          class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs text-white font-medium rounded-md"
-          on:click={handleModelSubmit}
-        >
-          Update a model
-        </button>
-        
-        <button
-          on:click={handleSettingsClick}
-          class="flex flex-row justify-center items-center text-white font-large rounded-md px-3 py-[7px] bg-Grey"
-        >
-          {#if isSettingMode}Ⅹ{:else}⚙{/if}</button
-        >
-      {:else if !isOnline}
-        <button
-          class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs cursor-not-allowed grayscale text-white font-medium rounded-md"
-        >
-          No connection :/
-        </button>
-        <button
-          on:click={handleSettingsClick}
-          class="flex flex-row justify-center items-center text-white font-large rounded-md px-3 py-[7px] bg-Grey"
-        >
-          {#if isSettingMode}Ⅹ{:else}⚙{/if}</button
-        >
-      {:else if emptySelection}
-        <button
-          class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs text-white font-medium rounded-md"
-          on:click={handleClick}
-        >
-          Please selects layers
-        </button>
-        <button
-          on:click={handleSettingsClick}
-          class="flex flex-row justify-center items-center text-white font-large rounded-md px-3 py-[7px] bg-Grey"
-        >
-          {#if isSettingMode}Ⅹ{:else}⚙{/if}</button
-        >
-      {:else}
-        <button
-          class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs text-white font-medium rounded-md"
-          class:cursor-not-allowed={isLoading}
-          on:click={handleClick}
-        >
-          {#if isLoading}
-            <img
-              src={loadingCircle}
-              alt="Loading circle"
-              class="animate-spin mr-2"
-            />
-          {/if}
-          {isLoading ? `Processing...` : `Name`}
-        </button>
-        
-        <button
-          on:click={handleSettingsClick}
-          class="flex flex-row justify-center items-center text-white font-large rounded-md px-3 py-[7px] bg-Grey"
-        >
-          {#if isSettingMode}Ⅹ{:else}⚙{/if}</button
-        >
-      {/if}
-    </button-container>
-  </body-container>
+	<body-container class="flex flex-col w-full items-center">
+		{#if responseStatus === 401}
+			<p class="text-xs text-white font-medium mb-4">Non authorized :/</p>
+		{:else if !isSettingMode}
+			<magic-wand-container class="p-2 rounded-full flex flex-col items-center justify-center m-6">
+				<img src={magicWand} alt="Magic wand icon" class="-translate-x-[3px] translate-y-[2px] h-10 w-10" />
+			</magic-wand-container>
+		{/if}
+		<button-container class="flex w-full items-center mt-4">
+			{#if !isModelReady}
+				<button
+					class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs cursor-not-allowed grayscale text-white font-medium rounded-md"
+				>
+					<img src={loadingCircle} alt="Loading circle" class="animate-spin mr-2" />
+					Loading model...
+				</button>
+				<button
+					on:click={handleSettingsClick}
+					class="flex flex-row justify-center items-center text-white font-large rounded-md px-3 py-[7px] bg-Grey"
+				>
+					{#if isSettingMode}
+						<img src={homeIcon} alt="Home icon" width="20" height="20" />
+					{:else}
+						<img src={settingsIcon} alt="Settings icon" width="20" height="20" />
+					{/if}</button
+				>
+			{:else if isSettingMode}
+				<button
+					class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs text-white font-medium rounded-md"
+					on:click={handleModelSubmit}
+				>
+					Update the model
+				</button>
+
+				<button
+					on:click={handleSettingsClick}
+					class="flex flex-row justify-center items-center text-white font-large rounded-md px-3 py-[7px] bg-Grey"
+				>
+					{#if isSettingMode}
+						<img src={homeIcon} alt="Home icon" width="20" height="20" />
+					{:else}
+						<img src={settingsIcon} alt="Settings icon" width="20" height="20" />
+					{/if}
+				</button>
+			{:else if !isOnline}
+				<button
+					class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs cursor-not-allowed grayscale text-white font-medium rounded-md"
+				>
+					No connection :/
+				</button>
+				<button
+					on:click={handleSettingsClick}
+					class="flex flex-row justify-center items-center text-white font-large rounded-md px-3 py-[7px] bg-Grey"
+				>
+					{#if isSettingMode}
+						<img src={homeIcon} alt="Home icon" width="20" height="20" />
+					{:else}
+						<img src={settingsIcon} alt="Settings icon" width="20" height="20" />
+					{/if}</button
+				>
+			{:else if emptySelection}
+				<button
+					class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs text-white font-medium rounded-md"
+					on:click={handleClick}
+				>
+					Please selects layers
+				</button>
+				<button
+					on:click={handleSettingsClick}
+					class="flex flex-row justify-center items-center text-white font-large rounded-md px-3 py-[7px] bg-Grey"
+				>
+					{#if isSettingMode}
+						<img src={homeIcon} alt="Home icon" width="20" height="20" />
+					{:else}
+						<img src={settingsIcon} alt="Settings icon" width="20" height="20" />
+					{/if}</button
+				>
+			{:else}
+				<button
+					class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs text-white font-medium rounded-md"
+					class:cursor-not-allowed={isLoading}
+					on:click={handleClick}
+				>
+					{#if isLoading}
+						<img src={loadingCircle} alt="Loading circle" class="animate-spin mr-2" />
+					{/if}
+					{isLoading ? `Processing...` : `Name`}
+				</button>
+
+				<button
+					on:click={handleSettingsClick}
+					class="flex flex-row justify-center items-center text-white font-large rounded-md px-3 py-[7px] bg-Grey"
+				>
+					{#if isSettingMode}
+						<img src={homeIcon} alt="Home icon" width="20" height="20" />
+					{:else}
+						<img src={settingsIcon} alt="Settings icon" width="20" height="20" />
+					{/if}</button
+				>
+			{/if}
+		</button-container>
+	</body-container>
 </main>
