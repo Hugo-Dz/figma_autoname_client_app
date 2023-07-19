@@ -108,6 +108,7 @@
 			emptySelection = false;
 
 			const binaryNodes: BinaryNode[] = event.data.pluginMessage.data;
+			const filename: string = event.data.pluginMessage.filename;
 			
 			if (isDebugMode) {
 				sampleImage = await renderUint8ArrayToImage(binaryNodes[0].imageDataBytes);
@@ -128,7 +129,7 @@
 			}
 
       if (enableExcelDownload) {
-          downloadResultsWithImages(results);
+          downloadResultsWithImages(results, filename);
       }
 
 			//Send result to Figma sandbox
@@ -194,7 +195,7 @@
 	}
 
 	
-	async function downloadResultsWithImages(data: PredictionResult[]): Promise<void> {
+	async function downloadResultsWithImages(data: PredictionResult[], filename:string): Promise<void> {
 		const workbook = new ExcelJS.Workbook();
 		const worksheet = workbook.addWorksheet('Results');
 
@@ -244,7 +245,7 @@
 		const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 		const link = document.createElement('a');
 		link.href = (window.URL as any).createObjectURL(blob);
-		link.download = 'results_with_images.xlsx';
+		link.download = filename + '.xlsx';
 		document.body.appendChild(link);
 		link.click();
 		document.body.removeChild(link);

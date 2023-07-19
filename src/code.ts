@@ -25,7 +25,8 @@ figma.ui.onmessage = async msg => {
       figma.ui.postMessage({type : "emptySelection"});
     } else {
       const imagesInBytes: BinaryNode[] = await renderElementsFromSelection(figma.currentPage.selection);
-      sendImagesToUi(imagesInBytes);
+      const filename: string = toAndroidResourceName(figma.root.name);
+      sendImagesToUi(imagesInBytes, filename);
     }
     
   }
@@ -221,6 +222,6 @@ function selectOnlyTopLevelNode(selection: readonly SceneNode[]): readonly Scene
   return selectedNodes;
 }
 
-function sendImagesToUi (imagesInBytes: BinaryNode[]) {
-  figma.ui.postMessage({type : "processingRequest", data : imagesInBytes}); //Send message to browser API
+function sendImagesToUi (imagesInBytes: BinaryNode[], filename: string) {
+  figma.ui.postMessage({type : "processingRequest", data : imagesInBytes, filename: filename}); //Send message to browser API
 }
