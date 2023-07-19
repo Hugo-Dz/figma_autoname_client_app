@@ -37,7 +37,7 @@
 	let model;
 
 	//Badge note
-	const versionNote: string = "Components & instances are no longer automatically renamed 🎉";
+	const versionNote: string = "Import your own Teachable Machine model! Go to settings ⚙️";
 
 	onMount(async () => {
 		isOnline = checkInternetConnection();
