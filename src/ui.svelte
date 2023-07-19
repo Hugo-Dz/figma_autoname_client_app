@@ -21,6 +21,7 @@
 
   // Utils
 	import isDebugMode from "src/utils/debugMode";
+	import { downloadSetting } from "./utils/config";
 	import * as ExcelJS from 'exceljs/dist/exceljs.min.js';
 	
 
@@ -35,7 +36,7 @@
 	let precision: number = 0.45;
 	let isSettingMode: boolean = false;
 	let URL: string = "";
-  let enableExcelDownload: boolean = isDebugMode ? true : false;
+	let enableExcelDownload: boolean = downloadSetting;
 
 	//TM setup
 	let model;
