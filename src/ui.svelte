@@ -199,11 +199,12 @@
 		const worksheet = workbook.addWorksheet('Results');
 
 		// Define columns
+		const imageHeight = Math.round(224/75*100) ; // Excel measures column width in points, 1 point = 0.75 pixels
 		worksheet.columns = [
 			{ header: 'Node ID', key: 'nodeId', width: 20 },
 			{ header: 'Prediction', key: 'prediction', width: 20 },
 			{ header: 'Probability', key: 'probability', width: 20 },
-			{ header: 'Image', key: 'image', width: 25 },
+			{ header: 'Image', key: 'image', width: 50 },
 		];
 
 		// Add rows
@@ -215,8 +216,8 @@
 			};
 			const newRow = worksheet.addRow(row);
 
-			// Set row height to 224 pixels
-			newRow.height = 224 / 0.75; // Excel measures row height in points, 1 point = 0.75 pixels
+			// Set row height 
+			newRow.height = imageHeight
 
 			// Add image to the cell if imageDataBytes is available
 			if (result.imageDataBytes) {
