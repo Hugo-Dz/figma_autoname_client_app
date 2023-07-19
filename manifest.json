@@ -1,8 +1,8 @@
 {
-    "name": "Figma Autoname for Grab",
-    "id": "1263334644310645737",
-    "editorType" : ["figma"],
-    "api": "1.0.0",
-    "main": "public/code.js",
-    "ui": "public/index.html"
-  }
+  "name": "Figma Autoname",
+  "id": "1160642826057169962",
+  "editorType" : ["figma"],
+  "api": "1.0.0",
+  "main": "public/code.js",
+  "ui": "public/index.html"
+}
