@@ -1,32 +1,32 @@
 <script lang="ts">
-  // Style
+	// Style
 	import "./app.css";
 
-  // Icons and images
+	// Icons and images
 	import magicWand from "./lib//assets/magicWand.svg";
 	import loadingCircle from "./lib/assets/loadingCircle.svg";
 	import settingsIcon from "./lib/assets/settings-icon.svg";
 	import homeIcon from "./lib/assets/home-icon.svg";
-  	import previousIcon from "./lib/assets/previous-icon.svg";
+	import previousIcon from "./lib/assets/previous-icon.svg";
 
 	import { Textarea } from "figma-plugin-ds-svelte";
 
-  // Svelte
+	// Svelte
 	import { onMount } from "svelte";
 
-  // Types
+	// Types
 	import type BinaryNodeJson from "./interfaces/BinaryNodeJson";
 	import type PredictionResult from "./interfaces/PredictionResult";
 	import type BinaryNode from "./interfaces/BinaryNode";
 
-  // Utils
+	// Utils
 	import isDebugMode from "src/utils/debugMode";
 	import { downloadSetting } from "./utils/config";
 	import * as ExcelJS from 'exceljs/dist/exceljs.min.js';
 	
 
 
-  // Variables
+	// Variables
 	let isLoading: boolean = false;
 	let emptySelection: boolean = false;
 	let responseStatus: number;
@@ -42,7 +42,7 @@
 	let model;
 
 	//Badge note
-	const versionNote: string = "Components & instances are no longer automatically renamed 🎉";
+	const versionNote: string = "Import your own Teachable Machine model! Go to settings ⚙️";
 
 	onMount(async () => {
 		isOnline = checkInternetConnection();
@@ -288,8 +288,8 @@
 						<p>Set a new model URL</p>
 						<!-- The Model Reset Button  -->
 						<button class="flex flex-row justify-center items-center" on:click={handleModelReset}>
-              <img src={previousIcon} alt="Previous icon" height="14" width="14">
-            </button>
+							<img src={previousIcon} alt="Previous icon" height="14" width="14" />
+						</button>
 					</div>
 					<Textarea
 						class="text-xs h-full text-slate-50 w-full font-medium mb-4 border-[1px] border-slate-600 border-opacity-40 rounded-md bg-slate-600 bg-opacity-30"
@@ -317,8 +317,7 @@
 	<body-container class="flex flex-col w-full items-center">
 		{#if responseStatus === 401}
 			<p class="text-xs text-white font-medium mb-4">Non authorized :/</p>
-      <!-- if status is not setting mode or debug mode, place magic-wand -->
-    {:else if !isSettingMode}
+		{:else if !isSettingMode && !isDebugMode}
 			<magic-wand-container class="p-2 rounded-full flex flex-col items-center justify-center m-6">
 				<img src={magicWand} alt="Magic wand icon" class="-translate-x-[3px] translate-y-[2px] h-10 w-10" />
 			</magic-wand-container>
@@ -331,16 +330,18 @@
 					<img src={loadingCircle} alt="Loading circle" class="animate-spin mr-2" />
 					Loading model...
 				</button>
-				<button
-					on:click={handleSettingsClick}
-					class="flex flex-row justify-center items-center text-white font-large rounded-md px-3 py-[7px] bg-Grey"
-				>
-					{#if isSettingMode}
-						<img src={homeIcon} alt="Home icon" width="20" height="20" />
-					{:else}
-						<img src={settingsIcon} alt="Settings icon" width="20" height="20" />
-					{/if}</button
-				>
+				{#if !isDebugMode}
+					<button
+						on:click={handleSettingsClick}
+						class="flex flex-row justify-center items-center text-white font-large rounded-md py-[7px] pl-3 bg-Grey"
+					>
+						{#if isSettingMode}
+							<img src={homeIcon} alt="Home icon" width="20" height="20" />
+						{:else}
+							<img src={settingsIcon} alt="Settings icon" width="20" height="20" />
+						{/if}</button
+					>
+				{/if}
 			{:else if isSettingMode}
 				<button
 					class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs text-white font-medium rounded-md"
@@ -349,32 +350,36 @@
 					Update the model
 				</button>
 
-				<button
-					on:click={handleSettingsClick}
-					class="flex flex-row justify-center items-center text-white font-large rounded-md px-3 py-[7px] bg-Grey"
-				>
-					{#if isSettingMode}
-						<img src={homeIcon} alt="Home icon" width="20" height="20" />
-					{:else}
-						<img src={settingsIcon} alt="Settings icon" width="20" height="20" />
-					{/if}
-				</button>
+				{#if !isDebugMode}
+					<button
+						on:click={handleSettingsClick}
+						class="flex flex-row justify-center items-center text-white font-large rounded-md py-[7px] pl-3 bg-Grey"
+					>
+						{#if isSettingMode}
+							<img src={homeIcon} alt="Home icon" width="20" height="20" />
+						{:else}
+							<img src={settingsIcon} alt="Settings icon" width="20" height="20" />
+						{/if}
+					</button>
+				{/if}
 			{:else if !isOnline}
 				<button
 					class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs cursor-not-allowed grayscale text-white font-medium rounded-md"
 				>
 					No connection :/
 				</button>
-				<button
-					on:click={handleSettingsClick}
-					class="flex flex-row justify-center items-center text-white font-large rounded-md px-3 py-[7px] bg-Grey"
-				>
-					{#if isSettingMode}
-						<img src={homeIcon} alt="Home icon" width="20" height="20" />
-					{:else}
-						<img src={settingsIcon} alt="Settings icon" width="20" height="20" />
-					{/if}</button
-				>
+				{#if !isDebugMode}
+					<button
+						on:click={handleSettingsClick}
+						class="flex flex-row justify-center items-center text-white font-large rounded-md py-[7px] pl-3 bg-Grey"
+					>
+						{#if isSettingMode}
+							<img src={homeIcon} alt="Home icon" width="20" height="20" />
+						{:else}
+							<img src={settingsIcon} alt="Settings icon" width="20" height="20" />
+						{/if}</button
+					>
+				{/if}
 			{:else if emptySelection}
 				<button
 					class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs text-white font-medium rounded-md"
@@ -382,16 +387,18 @@
 				>
 					Please selects layers
 				</button>
-				<button
-					on:click={handleSettingsClick}
-					class="flex flex-row justify-center items-center text-white font-large rounded-md px-3 py-[7px] bg-Grey"
-				>
-					{#if isSettingMode}
-						<img src={homeIcon} alt="Home icon" width="20" height="20" />
-					{:else}
-						<img src={settingsIcon} alt="Settings icon" width="20" height="20" />
-					{/if}</button
-				>
+				{#if !isDebugMode}
+					<button
+						on:click={handleSettingsClick}
+						class="flex flex-row justify-center items-center text-white font-large rounded-md py-[7px] pl-3 bg-Grey"
+					>
+						{#if isSettingMode}
+							<img src={homeIcon} alt="Home icon" width="20" height="20" />
+						{:else}
+							<img src={settingsIcon} alt="Settings icon" width="20" height="20" />
+						{/if}</button
+					>
+				{/if}
 			{:else}
 				<button
 					class="w-full flex flex-row justify-center items-center bg-Blue px-3 py-[7px] text-xs text-white font-medium rounded-md"
@@ -404,16 +411,18 @@
 					{isLoading ? `Processing...` : `Name`}
 				</button>
 
-				<button
-					on:click={handleSettingsClick}
-					class="flex flex-row justify-center items-center text-white font-large rounded-md px-3 py-[7px] bg-Grey"
-				>
-					{#if isSettingMode}
-						<img src={homeIcon} alt="Home icon" width="20" height="20" />
-					{:else}
-						<img src={settingsIcon} alt="Settings icon" width="20" height="20" />
-					{/if}</button
-				>
+				{#if !isDebugMode}
+					<button
+						on:click={handleSettingsClick}
+						class="flex flex-row justify-center items-center text-white font-large rounded-md pl-3 py-[7px] bg-Grey"
+					>
+						{#if isSettingMode}
+							<img src={homeIcon} alt="Home icon" width="20" height="20" />
+						{:else}
+							<img src={settingsIcon} alt="Settings icon" width="20" height="20" />
+						{/if}</button
+					>
+				{/if}
 			{/if}
 		</button-container>
 	</body-container>
