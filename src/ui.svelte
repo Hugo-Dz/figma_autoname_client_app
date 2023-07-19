@@ -7,7 +7,7 @@
 	import loadingCircle from "./lib/assets/loadingCircle.svg";
 	import settingsIcon from "./lib/assets/settings-icon.svg";
 	import homeIcon from "./lib/assets/home-icon.svg";
-  import previousIcon from "./lib/assets/previous-icon.svg";
+  	import previousIcon from "./lib/assets/previous-icon.svg";
 
 	import { Textarea } from "figma-plugin-ds-svelte";
 
@@ -21,6 +21,9 @@
 
   // Utils
 	import isDebugMode from "src/utils/debugMode";
+	import * as ExcelJS from 'exceljs/dist/exceljs.min.js';
+	
+
 
   // Variables
 	let isLoading: boolean = false;
@@ -32,6 +35,7 @@
 	let precision: number = 0.45;
 	let isSettingMode: boolean = false;
 	let URL: string = "";
+  let enableExcelDownload: boolean = isDebugMode ? true : false;
 
 	//TM setup
 	let model;
@@ -103,7 +107,7 @@
 			emptySelection = false;
 
 			const binaryNodes: BinaryNode[] = event.data.pluginMessage.data;
-
+			
 			if (isDebugMode) {
 				sampleImage = await renderUint8ArrayToImage(binaryNodes[0].imageDataBytes);
 			}
@@ -112,14 +116,19 @@
 
 			//TM PREDICTION LOOP
 			for (let node of binaryNodes) {
+				
 				const predictedNode: PredictionResult = await predict(node);
-				results = [...results, predictedNode];
+				results = [...results, predictedNode];	
 			}
 
 			if (isDebugMode) {
 				console.log(`[Svelte]: prediction results:`);
 				console.log(results);
 			}
+
+      if (enableExcelDownload) {
+          downloadResultsWithImages(results);
+      }
 
 			//Send result to Figma sandbox
 			window.parent.postMessage({ pluginMessage: { type: "response", payload: results } }, "*");
@@ -153,7 +162,7 @@
 
 		const prediction: any[] = await model.predict(pixelImage);
 
-		let sortedProbabilities = prediction.sort((a, b) => a.probability - b.probability);
+		let sortedProbabilities = prediction.sort((a, b) => a.probability - b.probability); // sort by probability ascending order (lowest first)
 
 		if (isDebugMode) {
 			console.log(sortedProbabilities);
@@ -163,10 +172,13 @@
 
 		let predictedNode: PredictionResult;
 
-		if (finalist.probability > precision) {
+		if (finalist.probability > precision) { // if the probability is higher than the precision(threshold), return the prediction. 
 			predictedNode = {
 				nodeId: node.nodeId,
 				prediction: finalist.className,
+				// percentage of probability (rounded to 2 decimals) with % symbol
+				probability: `${Math.round(finalist.probability * 10000) / 100}%`,
+				imageDataBytes: node.imageDataBytes
 			};
 		} else {
 			predictedNode = {
@@ -178,6 +190,63 @@
 		pixelImage.remove();
 
 		return predictedNode;
+	}
+
+	
+	async function downloadResultsWithImages(data: PredictionResult[]): Promise<void> {
+		const workbook = new ExcelJS.Workbook();
+		const worksheet = workbook.addWorksheet('Results');
+
+		// Define columns
+		worksheet.columns = [
+			{ header: 'Node ID', key: 'nodeId', width: 20 },
+			{ header: 'Prediction', key: 'prediction', width: 20 },
+			{ header: 'Probability', key: 'probability', width: 20 },
+			{ header: 'Image', key: 'image', width: 25 },
+		];
+
+		// Add rows
+		for (const result of data) {
+			const row = {
+				nodeId: result.nodeId,
+				prediction: result.prediction,
+				probability: result.probability,
+			};
+			const newRow = worksheet.addRow(row);
+
+			// Set row height to 224 pixels
+			newRow.height = 224 / 0.75; // Excel measures row height in points, 1 point = 0.75 pixels
+
+			// Add image to the cell if imageDataBytes is available
+			if (result.imageDataBytes) {
+				const base64Data = btoa(String.fromCharCode.apply(null, result.imageDataBytes));
+				const imageDataUrl = "data:image/png;base64," + base64Data;
+
+				const response = await fetch(imageDataUrl);
+				const blob = await response.blob();
+				const arrayBuffer = await blob.arrayBuffer();
+
+				const imageId = workbook.addImage({
+					buffer: arrayBuffer,
+					extension: 'png',
+				});
+
+				const rowIndex = newRow.number;
+				worksheet.addImage(imageId, `D${rowIndex}:D${rowIndex}`);
+			}
+		}
+
+		// Save the workbook to a buffer
+		const buffer = await workbook.xlsx.writeBuffer();
+
+		// Download the file
+		const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+		const link = document.createElement('a');
+		link.href = (window.URL as any).createObjectURL(blob);
+		link.download = 'results_with_images.xlsx';
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
 	}
 
 	function closePlugin(): void {
@@ -225,6 +294,10 @@
 						class="text-xs h-full text-slate-50 w-full font-medium mb-4 border-[1px] border-slate-600 border-opacity-40 rounded-md bg-slate-600 bg-opacity-30"
 						value={URL}
 					/>
+          <label class="flex items-center space-x-2">
+            <input type="checkbox" bind:checked={enableExcelDownload} class="rounded text-blue-600" />
+            <span class="text-xs text-white">Download Excel file</span>
+          </label>
 				</div>
 			{:else if !isModelReady}
 				Please wait the model loading
@@ -243,7 +316,8 @@
 	<body-container class="flex flex-col w-full items-center">
 		{#if responseStatus === 401}
 			<p class="text-xs text-white font-medium mb-4">Non authorized :/</p>
-		{:else if !isSettingMode}
+      <!-- if status is not setting mode or debug mode, place magic-wand -->
+    {:else if !isSettingMode}
 			<magic-wand-container class="p-2 rounded-full flex flex-col items-center justify-center m-6">
 				<img src={magicWand} alt="Magic wand icon" class="-translate-x-[3px] translate-y-[2px] h-10 w-10" />
 			</magic-wand-container>
