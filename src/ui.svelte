@@ -211,7 +211,7 @@
 			What's new: {versionNote}
 		</p>
 
-		<div class="text-base font-normal text-white text-center h-full mt-2 w-full">
+		<div class="text-base font-normal text-white text-center mt-2 w-full">
 			{#if isSettingMode}
 				<div class="flex flex-col justify-center items-center w-full space-y-2 h-full">
 					<div class="flex flex-row justify-between items-center w-full">
