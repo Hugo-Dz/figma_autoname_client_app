@@ -2,7 +2,6 @@ import type BinaryNode from "./interfaces/BinaryNode";
 import type PredictionResult from "./interfaces/PredictionResult";
 
 import isDebugMode from "src/utils/debugMode";
-import { customTFModel } from "src/utils/config";
 import toAndroidResourceName from "src/utils/toAndroidResourceName";
 
 //Disable infinite recursivity in nodes or limit it
@@ -10,6 +9,7 @@ const selectOnlyTopLevelNodes: boolean = false;
 const maxSubNodes: number = 3;
 const pluginUiHeight = isDebugMode ? 500 : 280;
 
+let customTFModel = process.env.PUBLIC_CUSTOM_MODEL;
 const defaultModel: string = customTFModel ? customTFModel : "https://teachablemachine.withgoogle.com/models/7TY9ihr-l/";
 const filename: string = toAndroidResourceName(figma.root.name);
 
