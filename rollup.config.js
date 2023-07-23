@@ -2,6 +2,7 @@ import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 import livereload from "rollup-plugin-livereload";
 import node from "@rollup/plugin-node-resolve";
+import dotenv from 'rollup-plugin-dotenv';
 
 // Svelte related
 import svelte from "rollup-plugin-svelte";
@@ -39,6 +40,8 @@ export default [
       file: "public/bundle.js",
     },
     plugins: [
+      // Dot env
+      dotenv(),
       // Svelte plugin
       svelte({
         // enable run-time checks when not in production
@@ -116,6 +119,7 @@ export default [
       name: "code",
     },
     plugins: [
+      dotenv(),
       typescript(),
       resolve(),
       commonjs({ transformMixedEsModules: true }),
