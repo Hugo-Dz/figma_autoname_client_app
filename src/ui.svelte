@@ -46,9 +46,13 @@
   onMount(async () => {
     isOnline = checkInternetConnection();
 
-    // post message to sandbox to get the model URL
-    parent.postMessage({ pluginMessage: { type: "init" } }, "*");
-  });
+		// post message to sandbox to get the model URL
+		parent.postMessage({ pluginMessage: { type: "init" } }, "*");
+
+		let myVariable = process.env.MY_VARIABLE;
+		console.log(myVariable);
+		
+	});
 
   const handleClick = () => {
     isLoading = true;
