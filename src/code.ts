@@ -28,7 +28,6 @@ if (figma.editorType === "dev") {
 async function updateSelection() {
 
   const selectedLayers = figma.currentPage.selection;
-  console.log("selectedLayers: ", selectedLayers);
 
   if (selectedLayers.length > 0) {
     const predictionResultJson = await figma.clientStorage.getAsync(selectedLayers[0].id);
