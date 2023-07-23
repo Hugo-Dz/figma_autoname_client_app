@@ -13,22 +13,48 @@ const pluginUiHeight = isDebugMode ? 500 : 280;
 const defaultModel: string = customTFModel ? customTFModel : "https://teachablemachine.withgoogle.com/models/7TY9ihr-l/";
 const filename: string = toAndroidResourceName(figma.root.name);
 
-// Start the plugin UI
-figma.showUI(__html__, {height: pluginUiHeight});
+// Show the plugin UI based on the editor type
 
+if (figma.editorType === "dev") {
+
+  figma.showUI(__html__) //Show the plugin UI
+  updateSelection();
+  figma.on('selectionchange', updateSelection);
+} else {
+  figma.showUI(__html__, { height: pluginUiHeight }); // Start the plugin UI with a specific height
+}
+
+
+async function updateSelection() {
+
+  const selectedLayers = figma.currentPage.selection;
+  console.log("selectedLayers: ", selectedLayers);
+
+  if (selectedLayers.length > 0) {
+    const predictionResultJson = await figma.clientStorage.getAsync(selectedLayers[0].id);
+
+    if (predictionResultJson) {
+      figma.ui.postMessage({ type: "updateSelection", payload: predictionResultJson });
+    } else {
+      figma.ui.postMessage({ type: "updateSelection", payload: "none" });
+    }
+  } else {
+    figma.ui.postMessage({ type: "updateSelection", payload: "none" });
+  }
+}
 
 figma.ui.onmessage = async msg => {
 
   if (msg.type === "clickPredictButton") {
 
     if (figma.currentPage.selection.length < 1) {
-      figma.ui.postMessage({type : "emptySelection"});
+      figma.ui.postMessage({ type: "emptySelection" });
     } else {
       const imagesInBytes: BinaryNode[] = await renderElementsFromSelection(figma.currentPage.selection);
       const filename: string = toAndroidResourceName(figma.root.name);
       sendImagesToUi(imagesInBytes, filename);
     }
-    
+
   }
 
   if (msg.type === "response") {
@@ -41,9 +67,20 @@ figma.ui.onmessage = async msg => {
 
     for (const node of nodesToRename) {
       node.name = "Frame"; //Rename all node "Frame" before renaming to avoid conflicts in exceptions
+
+
+      // Update the node name based on prediction result
       for (let predictionResult of msgPayload) { //figma.findNodeById(id) existe too
         if (node.id === predictionResult.nodeId) {
           node.name = predictionResult.prediction;
+
+          // set the prediction result via clientStorage
+          // Eencode it as a JSON string first via JSON.stringify and JSON.parse and store it as a string
+
+          const dataStoredAsString = JSON.stringify(predictionResult);
+          await figma.clientStorage.setAsync(node.id, dataStoredAsString);
+
+
         }
       }
 
@@ -84,6 +121,7 @@ figma.ui.onmessage = async msg => {
     console.log(`[Figma]: Renaming layer time: ${endTime - startTime}s`);
 
     //figma.closePlugin();
+
   }
 
   if (msg.type === "close") {
@@ -111,6 +149,7 @@ figma.ui.onmessage = async msg => {
 
   // if "resetModelURL" msg type, remove current_model from Client Storage and send the default model URL to the UI
   if (msg.type === "resetModelURL") {
+
     // remove current model from Client Storage
     await figma.clientStorage.setAsync(filename, "");
     // send default model to UI
@@ -128,9 +167,37 @@ figma.ui.onmessage = async msg => {
       timeout: 1000,
     });
   }
+
+  // if "downloadResults" msg type, download the results as an Excel file
+  if (msg.type === "requestForDownloadList") {
+    // Check keys in the Client Storage
+    const keys = await figma.clientStorage.keysAsync();
+
+    // Filter keys to only include the ones that are related to the current file
+    // Use FindAll method to find all the nodes in the current file with the same ID as the keys
+
+    const filteredKeys = keys.filter((key) => figma.currentPage.findAll((node) => node.id === key).length > 0 && key !== filename);
+
+
+    // Get the prediction results from the Client Storage
+    const downloadList: PredictionResult[] = await Promise.all(
+      filteredKeys.map(async (key) => {
+        const predictionResultJson = await figma.clientStorage.getAsync(key);
+        return JSON.parse(predictionResultJson);
+      })
+    );
+
+    // send DownloadList to UI
+    figma.ui.postMessage({
+      type: "download",
+      payload: downloadList,
+      filename: filename,
+    });
+
+  }
 };
 
-async function renderElementsFromSelection (selection: readonly SceneNode[]) {
+async function renderElementsFromSelection(selection: readonly SceneNode[]) {
   const excludedTypes: NodeType[] = ["TEXT", "VECTOR", "COMPONENT", "COMPONENT_SET", "INSTANCE"];
   const allSelectedNodes: SceneNode[] | readonly SceneNode[] = selectOnlyTopLevelNodes ? selectOnlyTopLevelNode(figma.currentPage.selection) : selectAllNodesFromSelection(figma.currentPage.selection, excludedTypes);
   const binaryNodes: BinaryNode[] = await sceneNodeToBinaryNode(allSelectedNodes);
@@ -138,7 +205,7 @@ async function renderElementsFromSelection (selection: readonly SceneNode[]) {
   return binaryNodes;
 }
 
-async function sceneNodeToBinaryNode (sceneNodes: SceneNode[] | readonly SceneNode[]): Promise<BinaryNode[]> {
+async function sceneNodeToBinaryNode(sceneNodes: SceneNode[] | readonly SceneNode[]): Promise<BinaryNode[]> {
   //Convert a scene node to my custom type: {id: 1, imageDataBytes: <uint8Array>}
 
   let renderedNodes: BinaryNode[] = [];
@@ -153,8 +220,8 @@ async function sceneNodeToBinaryNode (sceneNodes: SceneNode[] | readonly SceneNo
 
     const id: string = node.id;
     //const bytes: Uint8Array = await node.exportAsync({format : "JPG"});
-    const bytes: Uint8Array = await frameTheNodeToRender.exportAsync({format : "JPG"});
-    renderedNodes = [...renderedNodes, {nodeId : id, imageDataBytes : bytes}];
+    const bytes: Uint8Array = await frameTheNodeToRender.exportAsync({ format: "JPG" });
+    renderedNodes = [...renderedNodes, { nodeId: id, imageDataBytes: bytes }];
     if (nodeToRender !== node) {
       nodeToRender.remove();
     }
@@ -184,12 +251,12 @@ function frameANode(node: SceneNode): SceneNode {
   child.layoutGrow = 0;
   frame.insertChild(0, child);
   frame.resize(224, 224);
-  
-  
+
+
   return frame;
 }
 
-function selectAllNodesFromSelection (selection: readonly SceneNode[], excludeTypes: NodeType[]): SceneNode[] {
+function selectAllNodesFromSelection(selection: readonly SceneNode[], excludeTypes: NodeType[]): SceneNode[] {
 
   let selectedNodes: SceneNode[] = [];
   let childrenFromSelectedNodes = [];
@@ -222,6 +289,6 @@ function selectOnlyTopLevelNode(selection: readonly SceneNode[]): readonly Scene
   return selectedNodes;
 }
 
-function sendImagesToUi (imagesInBytes: BinaryNode[], filename: string) {
-  figma.ui.postMessage({type : "processingRequest", data : imagesInBytes, filename: filename}); //Send message to browser API
+function sendImagesToUi(imagesInBytes: BinaryNode[], filename: string) {
+  figma.ui.postMessage({ type: "processingRequest", data: imagesInBytes, filename: filename }); //Send message to browser API
 }

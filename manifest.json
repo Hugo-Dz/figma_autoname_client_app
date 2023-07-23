@@ -1,7 +1,8 @@
 {
   "name": "Figma Autoname",
   "id": "1160642826057169962",
-  "editorType" : ["figma"],
+  "editorType" : ["figma", "dev"],
+  "capabilities": ["inspect"],
   "api": "1.0.0",
   "main": "public/code.js",
   "ui": "public/index.html"
