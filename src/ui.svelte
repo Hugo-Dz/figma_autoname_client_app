@@ -166,9 +166,7 @@
 
       if (selectionInDevMode !== "none") {
         selectionInDevModeData = JSON.parse(selectionInDevMode);
-        sampleImage = await renderUint8ArrayToImage(
-          selectionInDevModeData.imageDataBytes
-        );
+        sampleImage.src = selectionInDevModeData.pixelImage;
       }
     }
 
@@ -224,7 +222,7 @@
         prediction: finalist.className,
         // percentage of probability (rounded to 2 decimals) with % symbol
         probability: `${Math.round(finalist.probability * 10000) / 100}%`,
-        imageDataBytes: node.imageDataBytes,
+        pixelImage: pixelImage.src,
       };
     } else {
       predictedNode = {
@@ -574,12 +572,16 @@
               class="rounded-md"
             />
           </div>
-          {#each Object.entries(selectionInDevModeData) as [key, value]}
-            <p class="mb-2 text-gray-400 justify-center text-xs">
-              <span class="font-semibold">{key}:</span>
-              {value}
-            </p>
-          {/each}
+
+          <dl class="max-w-md text-gray-900 divide-y divide-gray-200 dark:text-white dark:divide-gray-700">
+            {#each Object.entries(selectionInDevModeData) as [key, value]}
+              <div class="flex flex-col pb-3">
+                <dt class="mb-1 text-gray-500 md:text-lg dark:text-gray-400">{key}</dt>
+                <dd class="text-lg text-white font-semibold truncate">{value}</dd>
+              </div>
+            {/each}
+          </dl>
+          
         </div>
       {/if}
       <button-container class="flex w-full items-center justify-center m-4">

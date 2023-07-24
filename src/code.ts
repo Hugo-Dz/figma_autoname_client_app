@@ -78,8 +78,6 @@ figma.ui.onmessage = async msg => {
 
           const dataStoredAsString = JSON.stringify(predictionResult);
           await figma.clientStorage.setAsync(node.id, dataStoredAsString);
-
-
         }
       }
 

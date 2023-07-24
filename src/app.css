@@ -1,3 +1,12 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.truncate {
+  /* Add the following styles to enable text truncation */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  /* Set a specific width if you want to limit the width of the <dd> tag */
+  /* max-width: 200px; */
+}
