@@ -158,6 +158,20 @@ figma.ui.onmessage = async msg => {
     });
   }
 
+  // Reset all storage data
+  if (msg.type === "resetAllRequest") {
+    // get all keys from Client Storage
+    const keys = await figma.clientStorage.keysAsync();
+    // notify number of keys and double check with user
+    const resetAll = figma.notify(`You are about to reset ${keys.length} keys.`, {
+      timeout: 10000,
+      button: { text: "Confirm", action: () => { removeAllClientStoageData(keys); } }
+    });
+  }
+
+
+
+
   // if "updateModelURL" msg type, console.log msg and payload
   if (msg.type === "updateModelURL") {
     // update Client Storage
@@ -195,6 +209,27 @@ figma.ui.onmessage = async msg => {
 
   }
 };
+
+async function removeAllClientStoageData(keys) {
+  console.log("Removing all Client Storage data...", keys);
+  // remove all keys from Client Storage and notify user after completion
+  await Promise.all(
+    keys.map(async (key) => {
+      await figma.clientStorage.deleteAsync(key);
+    })
+  );
+
+  // get resetted keys from Client Storage
+  const resettedKeys = await figma.clientStorage.keysAsync();
+
+  // notify user that all Client Storage data has been removed
+
+  figma.notify(`All Client Storage data has been removed. ${resettedKeys.length} keys remaining.`, {
+    timeout: 1000,  
+  });
+
+}
+
 
 async function renderElementsFromSelection(selection: readonly SceneNode[]) {
   const excludedTypes: NodeType[] = ["TEXT", "VECTOR", "COMPONENT", "COMPONENT_SET", "INSTANCE"];

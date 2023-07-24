@@ -8,6 +8,7 @@
   import settingsIcon from "./lib/assets/settings-icon.svg";
   import homeIcon from "./lib/assets/home-icon.svg";
   import previousIcon from "./lib/assets/previous-icon.svg";
+  import deleteGarbageIcon from "./lib/assets/delete-garbage-icon.svg";
 
   import { Textarea } from "figma-plugin-ds-svelte";
 
@@ -104,6 +105,13 @@
   // Donwload request to the sandbox API handler
   const handleDownload = () => {
     parent.postMessage({ pluginMessage: { type: "requestForDownloadList" } }, "*");
+  };
+
+  // Reset the client storage
+
+  const handleClientStorageReset = () => {
+    // post message to sandbox to restore the current model value
+    parent.postMessage({ pluginMessage: { type: "resetAllRequest" } }, "*");
   };
 
   //Handle the demand from the sandbox API to make a network request when the order is recieved
@@ -330,21 +338,37 @@
           <div
             class="flex flex-col justify-center items-center w-full space-y-2 h-full"
           >
-            <div class="flex flex-row justify-between items-center w-full">
+            <div class="flex flex-row justify-between items-center w-full py-[7px] pl-3">
               <p>Set a new model URL</p>
-              <!-- The Model Reset Button  -->
-              <button
-                class="flex flex-row justify-center items-center"
-                on:click={handleModelReset}
-              >
-                <img
-                  src={previousIcon}
-                  alt="Previous icon"
-                  height="14"
-                  width="14"
-                />
-              </button>
+              <button-container class="flex flex-row items-center">
+                <!-- The Model Reset Button  -->
+                <button
+                  class="flex flex-row justify-right items-center pr-3"
+                  on:click={handleModelReset}
+                >
+                  <img
+                    src={previousIcon}
+                    alt="Previous icon"
+                    height="14"
+                    width="14"
+                  />
+                </button>
+                <!-- Client Storage reset button -->
+                <button 
+                  class="flex flex-row justify-right items-center"
+                  on:click={handleClientStorageReset}
+                >
+                  <img
+                    src={deleteGarbageIcon}
+                    alt="Delete Garbage Icon"
+                    height="14"
+                    width="14"
+                  />
+                </button>
+              </button-container>
             </div>
+
+            <!-- The Model URL Textarea -->
             <Textarea
               class="text-xs h-full text-slate-50 w-full font-medium mb-4 border-[1px] border-slate-600 border-opacity-40 rounded-md bg-slate-600 bg-opacity-30"
               value={URL}
