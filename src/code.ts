@@ -67,20 +67,32 @@ figma.ui.onmessage = async msg => {
     for (const node of nodesToRename) {
       node.name = "Frame"; //Rename all node "Frame" before renaming to avoid conflicts in exceptions
 
-
       // Update the node name based on prediction result
-      for (let predictionResult of msgPayload) { //figma.findNodeById(id) existe too
+      let imageIndex = await getImageIndex();
+      for (let predictionResult of msgPayload) {
         if (node.id === predictionResult.nodeId) {
           node.name = predictionResult.prediction;
 
-          // set the prediction result via clientStorage
-          // Eencode it as a JSON string first via JSON.stringify and JSON.parse and store it as a string
+          // Save the image to a new Figma page and get the image object ID
+          const imageObject = await createImageObject(predictionResult, imageIndex);
 
+          if (imageObject) {
+            const objectId = imageObject.id;
+
+            // Update the predictionResult object with the frame ID instead of the image data
+            predictionResult.pixelImage = objectId;
+
+            // Update the imageIndex and save it
+            imageIndex++;
+            await setImageIndex(imageIndex);
+          }
+
+          // Set the prediction result via clientStorage
+          // Encode it as a JSON string first via JSON.stringify and JSON.parse and store it as a string
           const dataStoredAsString = JSON.stringify(predictionResult);
           await figma.clientStorage.setAsync(node.id, dataStoredAsString);
         }
       }
-
 
       /*
       **********
@@ -100,7 +112,9 @@ figma.ui.onmessage = async msg => {
       if (node.type === "FRAME" || node.type === "GROUP") {
         const children: SceneNode[] = node.findAll();
         if (children.length > 1) {
-          const areChildrenAllTextNodes: boolean = children.every((node) => node.type === "TEXT");
+          const areChildrenAllTextNodes: boolean = children.every(
+            (node) => node.type === "TEXT"
+          );
           if (areChildrenAllTextNodes) {
             node.name = "Paragraph container";
           }
@@ -108,7 +122,13 @@ figma.ui.onmessage = async msg => {
       }
       //Handle container naming
       const parent: BaseNode & ChildrenMixin = node.parent;
-      if (parent.name === node.name && parent.name !== "Container" && parent.name !== "Card" && parent.name !== "Horizontal container" && parent.name !== "Vertical container") {
+      if (
+        parent.name === node.name &&
+        parent.name !== "Container" &&
+        parent.name !== "Card" &&
+        parent.name !== "Horizontal container" &&
+        parent.name !== "Vertical container"
+      ) {
         parent.name = `${node.name} container`;
       }
     }
@@ -223,7 +243,7 @@ async function removeAllClientStoageData(keys) {
   // notify user that all Client Storage data has been removed
 
   figma.notify(`All Client Storage data has been removed. ${resettedKeys.length} keys remaining.`, {
-    timeout: 1000,  
+    timeout: 1000,
   });
 
 }
@@ -323,4 +343,76 @@ function selectOnlyTopLevelNode(selection: readonly SceneNode[]): readonly Scene
 
 function sendImagesToUi(imagesInBytes: BinaryNode[], filename: string) {
   figma.ui.postMessage({ type: "processingRequest", data: imagesInBytes, filename: filename }); //Send message to browser API
+}
+
+async function createImageObject(predictionResult: PredictionResult, imageIndex: number): Promise<RectangleNode | null> {
+  const arrayBuffer = await base64ToArrayBuffer(predictionResult.pixelImage);
+
+  if (arrayBuffer.length === 0) {
+    return null;
+  }
+
+  const imageStoragePage = await getImageStoragePage();
+
+  const imageObject = figma.createRectangle();
+  imageStoragePage.appendChild(imageObject);
+
+  // Set the image object size to 224x224px
+  imageObject.resize(224, 224);
+
+  // Position the image objects in a grid, 20 objects per row
+  const x = (imageIndex % 20) * 224;
+  const y = Math.floor(imageIndex / 20) * 224;
+  imageObject.x = x;
+  imageObject.y = y;
+
+  const imageFill: ImagePaint = {
+    type: "IMAGE",
+    scaleMode: "FILL",
+    imageHash: figma.createImage(arrayBuffer).hash,
+  };
+
+  imageObject.fills = [imageFill];
+
+  // Set the image object name to "prediction / probability (%)"
+  const probability = predictionResult.probability || "0%";
+  imageObject.name = `${predictionResult.prediction} / ${probability}`;
+
+  return imageObject;
+}
+
+async function base64ToArrayBuffer(base64: string): Promise<Uint8Array> {
+  if (!base64) {
+    return new Uint8Array();
+  }
+
+  const response = await fetch("data:image/png;base64," + base64.split(",")[1]);
+  const buffer = await response.arrayBuffer();
+  return new Uint8Array(buffer);
+}
+
+async function getImageStoragePage(): Promise<PageNode> {
+  const imageStoragePageId = await figma.clientStorage.getAsync("imageStoragePageId");
+
+  if (imageStoragePageId) {
+    const existingPage = figma.getNodeById(imageStoragePageId);
+
+    if (existingPage && existingPage.type === "PAGE") {
+      return existingPage as PageNode;
+    }
+  }
+
+  const newPage = figma.createPage();
+  newPage.name = "Image Storage";
+  await figma.clientStorage.setAsync("imageStoragePageId", newPage.id);
+  return newPage;
+}
+
+async function getImageIndex(): Promise<number> {
+  const imageIndex = await figma.clientStorage.getAsync("imageIndex");
+  return imageIndex || 0;
+}
+
+async function setImageIndex(index: number): Promise<void> {
+  await figma.clientStorage.setAsync("imageIndex", index);
 }
