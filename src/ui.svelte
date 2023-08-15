@@ -9,6 +9,7 @@
   import homeIcon from "./lib/assets/home-icon.svg";
   import previousIcon from "./lib/assets/previous-icon.svg";
   import deleteGarbageIcon from "./lib/assets/delete-garbage-icon.svg";
+  import consoleLogIcon from "./lib/assets/console-log-icon.svg";
 
   import { Textarea } from "figma-plugin-ds-svelte";
 
@@ -107,8 +108,12 @@
     parent.postMessage({ pluginMessage: { type: "requestForDownloadList" } }, "*");
   };
 
-  // Reset the client storage
+  // Send a request to the sandbox API to log the client storage
+  const handleLogRequest = () => {
+    parent.postMessage({ pluginMessage: { type: "requestLog" } }, "*");
+  };
 
+  // Reset the client storage
   const handleClientStorageReset = () => {
     // post message to sandbox to restore the current model value
     parent.postMessage({ pluginMessage: { type: "resetAllRequest" } }, "*");
@@ -164,10 +169,12 @@
     if (event.data.pluginMessage.type === "updateSelection") {
       selectionInDevMode = event.data.pluginMessage.payload;
 
-      if (selectionInDevMode !== "none") {
-        selectionInDevModeData = JSON.parse(selectionInDevMode);
-        sampleImage.src = selectionInDevModeData.pixelImage;
-      }
+      console.log(selectionInDevMode);
+
+      // if (selectionInDevMode !== "none") {
+      //   selectionInDevModeData = JSON.parse(selectionInDevMode);
+      //   sampleImage.src = selectionInDevModeData.pixelImage;
+      // }
     }
 
     // download the results
@@ -341,12 +348,24 @@
               <button-container class="flex flex-row items-center">
                 <!-- The Model Reset Button  -->
                 <button
-                  class="flex flex-row justify-right items-center pr-3"
+                  class="flex flex-row justify-right items-center pr-1"
                   on:click={handleModelReset}
                 >
                   <img
                     src={previousIcon}
                     alt="Previous icon"
+                    height="14"
+                    width="14"
+                  />
+                </button>
+                <!-- send Plugin to console log client storage -->
+                <button 
+                  class="flex flex-row justify-right items-center pr-1"
+                  on:click={handleLogRequest}
+                >
+                  <img
+                    src={consoleLogIcon}
+                    alt="console log client storage"
                     height="14"
                     width="14"
                   />

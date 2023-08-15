@@ -14,52 +14,81 @@ const defaultModel: string = customTFModel ? customTFModel : "https://teachablem
 const filename: string = toAndroidResourceName(figma.root.name);
 
 // Show the plugin UI based on the editor type
-
 if (figma.editorType === "dev") {
+  figma.showUI(__html__); // Show the plugin UI
 
-  figma.showUI(__html__) //Show the plugin UI
-  updateSelection();
-  figma.on('selectionchange', updateSelection);
+  // Set up the initial state
+  figma.ui.postMessage({ type: "updateSelection", payload: "none" });
+
+  // Handle the initial state
+  if (figma.currentPage.selection.length === 1) {
+    updateSelection(figma.currentPage.selection[0]);
+  }
+
+  figma.on('selectionchange', () => {
+    if (figma.currentPage.selection.length === 1) {
+      updateSelection(figma.currentPage.selection[0]);
+    } else {
+      figma.ui.postMessage({ type: "updateSelection", payload: "none" });
+
+      if (isDebugMode && figma.currentPage.selection.length > 1) {
+        console.warn('Warning: Only single layer selection is supported in dev mode.');
+      }
+    }
+  });
 } else {
   figma.showUI(__html__, { height: pluginUiHeight }); // Start the plugin UI with a specific height
 }
 
+async function updateSelection(selectedLayer: SceneNode) {
+  const predictionResultJson = await figma.clientStorage.getAsync(selectedLayer.id);
 
-async function updateSelection() {
+  if (predictionResultJson !== undefined) {
+    const predictionResult = JSON.parse(predictionResultJson);
 
-  const selectedLayers = figma.currentPage.selection;
+    // Get the image data from the pixelImage node ID
+    const imageData = await getImageDataFromObjectId(predictionResult.pixelImage);
 
-  if (selectedLayers.length > 0) {
-    const predictionResultJson = await figma.clientStorage.getAsync(selectedLayers[0].id);
+    // Update the pixelImage property with the Uint8Array
+    predictionResult.pixelImage = imageData;
 
-    if (predictionResultJson) {
-      figma.ui.postMessage({ type: "updateSelection", payload: predictionResultJson });
-    } else {
-      figma.ui.postMessage({ type: "updateSelection", payload: "none" });
-    }
+    figma.ui.postMessage({
+      type: "updateSelection",
+      payload: JSON.stringify(predictionResult),
+    });
   } else {
+    if (isDebugMode) {
+      console.warn('Warning: No matching node ID found in client storage.');
+    }
     figma.ui.postMessage({ type: "updateSelection", payload: "none" });
   }
 }
 
 figma.ui.onmessage = async msg => {
-
   if (msg.type === "clickPredictButton") {
-
     if (figma.currentPage.selection.length < 1) {
       figma.ui.postMessage({ type: "emptySelection" });
     } else {
-      const imagesInBytes: BinaryNode[] = await renderElementsFromSelection(figma.currentPage.selection);
+      const imagesInBytes: BinaryNode[] = await renderElementsFromSelection(
+        figma.currentPage.selection
+      );
       const filename: string = toAndroidResourceName(figma.root.name);
       sendImagesToUi(imagesInBytes, filename);
     }
-
   }
 
   if (msg.type === "response") {
-
-    const excludedTypes: NodeType[] = ["TEXT", "VECTOR", "COMPONENT", "COMPONENT_SET", "INSTANCE"];
-    const nodesToRename: SceneNode[] = selectAllNodesFromSelection(figma.currentPage.selection, excludedTypes);
+    const excludedTypes: NodeType[] = [
+      "TEXT",
+      "VECTOR",
+      "COMPONENT",
+      "COMPONENT_SET",
+      "INSTANCE",
+    ];
+    const nodesToRename: SceneNode[] = selectAllNodesFromSelection(
+      figma.currentPage.selection,
+      excludedTypes
+    );
     const msgPayload: PredictionResult[] = msg.payload;
 
     const startTime: number = new Date().getTime();
@@ -71,26 +100,22 @@ figma.ui.onmessage = async msg => {
       let imageIndex = await getImageIndex();
       for (let predictionResult of msgPayload) {
         if (node.id === predictionResult.nodeId) {
-          node.name = predictionResult.prediction;
+          node.name = predictionResult.prediction; // Update the node name with the prediction result
 
-          // Save the image to a new Figma page and get the image object ID
-          const imageObject = await createImageObject(predictionResult, imageIndex);
+          if (predictionResult.pixelImage) {
+            // If the prediction result has a pixelImage value
+            const imageObject = await createImageObject(
+              predictionResult,
+              imageIndex
+            );
+            predictionResult.pixelImage = imageObject.id; // Update the pixelImage with the image object ID
 
-          if (imageObject) {
-            const objectId = imageObject.id;
-
-            // Update the predictionResult object with the frame ID instead of the image data
-            predictionResult.pixelImage = objectId;
-
-            // Update the imageIndex and save it
             imageIndex++;
             await setImageIndex(imageIndex);
-          }
 
-          // Set the prediction result via clientStorage
-          // Encode it as a JSON string first via JSON.stringify and JSON.parse and store it as a string
-          const dataStoredAsString = JSON.stringify(predictionResult);
-          await figma.clientStorage.setAsync(node.id, dataStoredAsString);
+            const dataStoredAsString = JSON.stringify(predictionResult);
+            await figma.clientStorage.setAsync(node.id, dataStoredAsString); // Store the prediction result in clientStorage
+          }
         }
       }
 
@@ -138,7 +163,6 @@ figma.ui.onmessage = async msg => {
     console.log(`[Figma]: Renaming layer time: ${endTime - startTime}s`);
 
     //figma.closePlugin();
-
   }
 
   if (msg.type === "close") {
@@ -166,7 +190,6 @@ figma.ui.onmessage = async msg => {
 
   // if "resetModelURL" msg type, remove current_model from Client Storage and send the default model URL to the UI
   if (msg.type === "resetModelURL") {
-
     // remove current model from Client Storage
     await figma.clientStorage.setAsync(filename, "");
     // send default model to UI
@@ -181,14 +204,19 @@ figma.ui.onmessage = async msg => {
     // get all keys from Client Storage
     const keys = await figma.clientStorage.keysAsync();
     // notify number of keys and double check with user
-    const resetAll = figma.notify(`You are about to reset ${keys.length} keys.`, {
-      timeout: 10000,
-      button: { text: "Confirm", action: () => { removeAllClientStoageData(keys); } }
-    });
+    const resetAll = figma.notify(
+      `You are about to reset ${keys.length} keys.`,
+      {
+        timeout: 10000,
+        button: {
+          text: "Confirm",
+          action: () => {
+            removeAllClientStoageData(keys);
+          },
+        },
+      }
+    );
   }
-
-
-
 
   // if "updateModelURL" msg type, console.log msg and payload
   if (msg.type === "updateModelURL") {
@@ -207,8 +235,11 @@ figma.ui.onmessage = async msg => {
     // Filter keys to only include the ones that are related to the current file
     // Use FindAll method to find all the nodes in the current file with the same ID as the keys
 
-    const filteredKeys = keys.filter((key) => figma.currentPage.findAll((node) => node.id === key).length > 0 && key !== filename);
-
+    const filteredKeys = keys.filter(
+      (key) =>
+        figma.currentPage.findAll((node) => node.id === key).length > 0 &&
+        key !== filename
+    );
 
     // Get the prediction results from the Client Storage
     const downloadList: PredictionResult[] = await Promise.all(
@@ -224,7 +255,28 @@ figma.ui.onmessage = async msg => {
       payload: downloadList,
       filename: filename,
     });
+  }
 
+  // if "requestLog" msg type, console log Figma client storage
+  if (msg.type === "requestLog") {
+    // get all keys from Client Storage
+    const keys = await figma.clientStorage.keysAsync();
+
+    // get all values from Client Storage, parse them and console log them
+    await Promise.all(
+      keys.map(async (key) => {
+        const value = await figma.clientStorage.getAsync(key);
+        try {
+          // Try parsing the value as JSON
+          const parsedValue = JSON.parse(value);
+          console.log(`Key: ${key}`, parsedValue);
+        } catch (error) {
+          // If an error occurs, log the error and the original value
+          console.warn(`Error parsing value for key "${key}": ${error}`);
+          console.log(`Original value: ${value}`);
+        }
+      })
+    );
   }
 };
 
@@ -403,7 +455,7 @@ async function getImageStoragePage(): Promise<PageNode> {
   }
 
   const newPage = figma.createPage();
-  newPage.name = "Image Storage";
+  newPage.name = "🔒 DevMode Image Storage (Do Not Delete)";
   await figma.clientStorage.setAsync("imageStoragePageId", newPage.id);
   return newPage;
 }
@@ -415,4 +467,21 @@ async function getImageIndex(): Promise<number> {
 
 async function setImageIndex(index: number): Promise<void> {
   await figma.clientStorage.setAsync("imageIndex", index);
+}
+
+async function getImageDataFromObjectId(objectId: string): Promise<string | null> {
+  const imageObject = figma.getNodeById(objectId);
+
+  if (imageObject && imageObject.type === "RECTANGLE") {
+    const imagePaint = imageObject.fills[0] as ImagePaint;
+    const imageBytes = await figma.getImageByHash(imagePaint.imageHash).getBytesAsync();
+    
+    // Convert the Uint8Array to a base64 string
+    const base64Data = btoa(String.fromCharCode.apply(null, imageBytes));
+    const imageDataUrl = "data:image/png;base64," + base64Data;
+
+    return imageDataUrl;
+  }
+
+  return null;
 }
