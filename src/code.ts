@@ -232,36 +232,6 @@ figma.ui.onmessage = async msg => {
     });
   }
 
-  // if "downloadResults" msg type, download the results as an Excel file
-  if (msg.type === "requestForDownloadList") {
-    // Check keys in the Client Storage
-    const keys = await figma.clientStorage.keysAsync();
-
-    // Filter keys to only include the ones that are related to the current file
-    // Use FindAll method to find all the nodes in the current file with the same ID as the keys
-
-    const filteredKeys = keys.filter(
-      (key) =>
-        figma.currentPage.findAll((node) => node.id === key).length > 0 &&
-        key !== filename
-    );
-
-    // Get the prediction results from the Client Storage
-    const downloadList: PredictionResult[] = await Promise.all(
-      filteredKeys.map(async (key) => {
-        const predictionResultJson = await figma.clientStorage.getAsync(key);
-        return JSON.parse(predictionResultJson);
-      })
-    );
-
-    // send DownloadList to UI
-    figma.ui.postMessage({
-      type: "download",
-      payload: downloadList,
-      filename: filename,
-    });
-  }
-
   // if "requestLog" msg type, console log Figma client storage
   if (msg.type === "requestLog") {
     // get all keys from Client Storage

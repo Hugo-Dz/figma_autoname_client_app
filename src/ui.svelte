@@ -22,7 +22,6 @@
 
   // Utils
   import isDebugMode from "src/utils/debugMode";
-  import * as ExcelJS from "exceljs/dist/exceljs.min.js";
 
   // Variables
   let isLoading: boolean = false;
@@ -99,14 +98,6 @@
   const handleModelReset = () => {
     // post message to sandbox to restore the current model value
     parent.postMessage({ pluginMessage: { type: "resetModelURL" } }, "*");
-  };
-
-  // Donwload request to the sandbox API handler
-  const handleDownload = () => {
-    parent.postMessage(
-      { pluginMessage: { type: "requestForDownloadList" } },
-      "*"
-    );
   };
 
   // Send a request to the sandbox API to log the client storage
@@ -187,17 +178,6 @@
       console.log(selectionInDevMode);
     }
 
-    // download the results
-    if (event.data.pluginMessage.type === "download") {
-      const list: PredictionResult[] = event.data.pluginMessage.payload;
-      const filename: string = event.data.pluginMessage.filename;
-
-      // download the results
-      downloadResultsWithImages(list, filename);
-
-      // close the plugin
-      closePlugin();
-    }
   };
 
   async function init(modelURL: string, metadataURL: string) {
@@ -251,67 +231,6 @@
     pixelImage.remove();
 
     return predictedNode;
-  }
-
-  async function downloadResultsWithImages(
-    data: PredictionResult[],
-    filename: string
-  ): Promise<void> {
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Results");
-
-    // Define columns
-    worksheet.columns = [
-      { header: "Node ID", key: "nodeId", width: 20 },
-      { header: "Prediction", key: "prediction", width: 20 },
-      { header: "Probability", key: "probability", width: 20 },
-      { header: "Image", key: "image", width: 25 },
-    ];
-
-    // Add rows
-    for (const result of data) {
-      const row = {
-        nodeId: result.nodeId,
-        prediction: result.prediction,
-        probability: result.probability ? result.probability : "",
-      };
-      const newRow = worksheet.addRow(row);
-
-      // Set row height to 224 pixels
-      newRow.height = 224 / 0.75; // Excel measures row height in points, 1 point = 0.75 pixels
-
-      // // Add image to the cell if imageDataBytes is available
-      // if (result.imageDataBytes) {
-      // 	const base64Data = btoa(String.fromCharCode.apply(null, result.imageDataBytes));
-      // 	const imageDataUrl = "data:image/png;base64," + base64Data;
-
-      // 	const response = await fetch(imageDataUrl);
-      // 	const blob = await response.blob();
-      // 	const arrayBuffer = await blob.arrayBuffer();
-
-      // 	const imageId = workbook.addImage({
-      // 		buffer: arrayBuffer,
-      // 		extension: 'png',
-      // 	});
-
-      // 	const rowIndex = newRow.number;
-      // 	worksheet.addImage(imageId, `D${rowIndex}:D${rowIndex}`);
-      // }
-    }
-
-    // Save the workbook to a buffer
-    const buffer = await workbook.xlsx.writeBuffer();
-
-    // Download the file
-    const blob = new Blob([buffer], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-    const link = document.createElement("a");
-    link.href = (window.URL as any).createObjectURL(blob);
-    link.download = filename + ".xlsx";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   }
 
   function closePlugin(): void {
