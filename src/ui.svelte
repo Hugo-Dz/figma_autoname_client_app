@@ -24,7 +24,6 @@
   import isDebugMode from "src/utils/debugMode";
   import * as ExcelJS from "exceljs/dist/exceljs.min.js";
 
-
   // Variables
   let isLoading: boolean = false;
   let emptySelection: boolean = false;
@@ -35,8 +34,8 @@
   let precision: number = 0.45;
   let isSettingMode: boolean = false;
   let URL: string = "";
-  let selectionInDevMode: string | null = null; // Renamed selection in dev mode
-  let selectionInDevModeData: PredictionResult = null;
+  let editorType: string = "design"; // The default editor type is "design" but it can be "dev" if the user is in dev mode.
+  let selectionInDevMode: PredictionResult | null = null;
 
   //TM setup
   let model;
@@ -48,10 +47,9 @@
   onMount(async () => {
     isOnline = checkInternetConnection();
 
-		// post message to sandbox to get the model URL
-		parent.postMessage({ pluginMessage: { type: "init" } }, "*");
-		
-	});
+    // post message to sandbox to get the model URL
+    parent.postMessage({ pluginMessage: { type: "init" } }, "*");
+  });
 
   const handleClick = () => {
     isLoading = true;
@@ -105,7 +103,10 @@
 
   // Donwload request to the sandbox API handler
   const handleDownload = () => {
-    parent.postMessage({ pluginMessage: { type: "requestForDownloadList" } }, "*");
+    parent.postMessage(
+      { pluginMessage: { type: "requestForDownloadList" } },
+      "*"
+    );
   };
 
   // Send a request to the sandbox API to log the client storage
@@ -166,15 +167,24 @@
       isSettingMode = false;
     }
 
-    if (event.data.pluginMessage.type === "updateSelection") {
+    if (event.data.pluginMessage.type === "devModeSelection") {
+      // console log editor type
+      editorType = event.data.pluginMessage.editorType;
+      console.log(`[Svelte]: Editor type: ${editorType}`);
+
       selectionInDevMode = event.data.pluginMessage.payload;
 
-      console.log(selectionInDevMode);
+      // if type of selectionInDevMode is string, it means that the selection is empty
+      if (selectionInDevMode && selectionInDevMode.imageDataBytes) {
+        const pixelImage: HTMLImageElement = await renderUint8ArrayToImage(
+          selectionInDevMode.imageDataBytes
+        );
 
-      // if (selectionInDevMode !== "none") {
-      //   selectionInDevModeData = JSON.parse(selectionInDevMode);
-      //   sampleImage.src = selectionInDevModeData.pixelImage;
-      // }
+        // set pixelImage to the sampleImage
+        sampleImage = pixelImage;
+      }
+
+      console.log(selectionInDevMode);
     }
 
     // download the results
@@ -184,7 +194,7 @@
 
       // download the results
       downloadResultsWithImages(list, filename);
-      
+
       // close the plugin
       closePlugin();
     }
@@ -243,61 +253,66 @@
     return predictedNode;
   }
 
-  async function downloadResultsWithImages(data: PredictionResult[], filename:string): Promise<void> {
-		const workbook = new ExcelJS.Workbook();
-		const worksheet = workbook.addWorksheet('Results');
+  async function downloadResultsWithImages(
+    data: PredictionResult[],
+    filename: string
+  ): Promise<void> {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Results");
 
-		// Define columns
-		worksheet.columns = [
-			{ header: 'Node ID', key: 'nodeId', width: 20 },
-			{ header: 'Prediction', key: 'prediction', width: 20 },
-			{ header: 'Probability', key: 'probability', width: 20 },
-			{ header: 'Image', key: 'image', width: 25 },
-		];
+    // Define columns
+    worksheet.columns = [
+      { header: "Node ID", key: "nodeId", width: 20 },
+      { header: "Prediction", key: "prediction", width: 20 },
+      { header: "Probability", key: "probability", width: 20 },
+      { header: "Image", key: "image", width: 25 },
+    ];
 
-		// Add rows
-		for (const result of data) {
-			const row = {
-				nodeId: result.nodeId,
-				prediction: result.prediction,
-				probability: result.probability ? result.probability : "",
-			};
-			const newRow = worksheet.addRow(row);
+    // Add rows
+    for (const result of data) {
+      const row = {
+        nodeId: result.nodeId,
+        prediction: result.prediction,
+        probability: result.probability ? result.probability : "",
+      };
+      const newRow = worksheet.addRow(row);
 
-			// Set row height to 224 pixels
-			newRow.height = 224 / 0.75; // Excel measures row height in points, 1 point = 0.75 pixels
+      // Set row height to 224 pixels
+      newRow.height = 224 / 0.75; // Excel measures row height in points, 1 point = 0.75 pixels
 
-			// // Add image to the cell if imageDataBytes is available
-			// if (result.imageDataBytes) {
-			// 	const base64Data = btoa(String.fromCharCode.apply(null, result.imageDataBytes));
-			// 	const imageDataUrl = "data:image/png;base64," + base64Data;
+      // // Add image to the cell if imageDataBytes is available
+      // if (result.imageDataBytes) {
+      // 	const base64Data = btoa(String.fromCharCode.apply(null, result.imageDataBytes));
+      // 	const imageDataUrl = "data:image/png;base64," + base64Data;
 
-			// 	const response = await fetch(imageDataUrl);
-			// 	const blob = await response.blob();
-			// 	const arrayBuffer = await blob.arrayBuffer();
+      // 	const response = await fetch(imageDataUrl);
+      // 	const blob = await response.blob();
+      // 	const arrayBuffer = await blob.arrayBuffer();
 
-			// 	const imageId = workbook.addImage({
-			// 		buffer: arrayBuffer,
-			// 		extension: 'png',
-			// 	});
+      // 	const imageId = workbook.addImage({
+      // 		buffer: arrayBuffer,
+      // 		extension: 'png',
+      // 	});
 
-			// 	const rowIndex = newRow.number;
-			// 	worksheet.addImage(imageId, `D${rowIndex}:D${rowIndex}`);
-			// }
-		}
+      // 	const rowIndex = newRow.number;
+      // 	worksheet.addImage(imageId, `D${rowIndex}:D${rowIndex}`);
+      // }
+    }
 
-		// Save the workbook to a buffer
-		const buffer = await workbook.xlsx.writeBuffer();
+    // Save the workbook to a buffer
+    const buffer = await workbook.xlsx.writeBuffer();
 
-		// Download the file
-		const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-		const link = document.createElement('a');
-		link.href = (window.URL as any).createObjectURL(blob);
-		link.download = filename + '.xlsx';
-		document.body.appendChild(link);
-		link.click();
-		document.body.removeChild(link);
-	}
+    // Download the file
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const link = document.createElement("a");
+    link.href = (window.URL as any).createObjectURL(blob);
+    link.download = filename + ".xlsx";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 
   function closePlugin(): void {
     window.parent.postMessage({ pluginMessage: { type: "close" } }, "*");
@@ -329,8 +344,8 @@
 <main
   class="flex flex-col items-center justify-between px-4 py-4 h-full bg-[#2C2C2C]"
 >
-  <!-- If not dev mode, selectionInDevMode sets to null -->
-  {#if !selectionInDevMode}
+  <!-- Regular UI -->
+  {#if editorType === "design"}
     <div class="flex flex-col items-center w-full space-y-4 h-full">
       <p
         class="text-xs text-slate-50 w-full px-3 py-2 border-[1px] border-slate-600 border-opacity-40 rounded-md bg-slate-600 bg-opacity-30"
@@ -343,7 +358,9 @@
           <div
             class="flex flex-col justify-center items-center w-full space-y-2 h-full"
           >
-            <div class="flex flex-row justify-between items-center w-full py-[7px] pl-3">
+            <div
+              class="flex flex-row justify-between items-center w-full py-[7px] pl-3"
+            >
               <p>Set a new model URL</p>
               <button-container class="flex flex-row items-center">
                 <!-- The Model Reset Button  -->
@@ -359,7 +376,7 @@
                   />
                 </button>
                 <!-- send Plugin to console log client storage -->
-                <button 
+                <button
                   class="flex flex-row justify-right items-center pr-1"
                   on:click={handleLogRequest}
                 >
@@ -371,7 +388,7 @@
                   />
                 </button>
                 <!-- Client Storage reset button -->
-                <button 
+                <button
                   class="flex flex-row justify-right items-center"
                   on:click={handleClientStorageReset}
                 >
@@ -568,54 +585,58 @@
         {/if}
       </button-container>
     </body-container>
-  {:else}
+    <!-- DevMode UI -->
+  {:else if editorType === "dev"}
     <body-container class="flex flex-col w-full h-full items-center">
-      {#if selectionInDevModeData === null}
-        <!-- Show wand image in the body -->
-        <magic-wand-container
-          class="p-2 rounded-full flex flex-col items-center justify-center m-6"
+      {#if selectionInDevMode}
+        <div
+          class="w-full max-w-sm bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700"
         >
-          <img
-            src={magicWand}
-            alt="Magic wand icon"
-            class="-translate-x-[3px] translate-y-[2px] h-10 w-10"
-          />
-        </magic-wand-container>
-      {:else}
-        <div class="text-white text-sm w-full max-w-screen-md p-4">
-          <div class="flex flex-col items-center mb-4">
-            <img
-              src={sampleImage.src}
-              alt="Pixels sent to the model"
-              bind:this={sampleImage}
-              class="rounded-md"
-            />
+        <h5
+        class="text-xl font-semibold tracking-tight text-gray-900 dark:text-white ml-4 mt-4"
+      >
+        Autoname Prediction
+      </h5>
+          <div class="flex rounded-lg border flex-col items-center m-4">
+            {#if sampleImage}
+              <img
+                src={sampleImage.src}
+                alt="Pixels sent to the model"
+                bind:this={sampleImage}
+                class="rounded-md"
+              />
+            {/if}
           </div>
-
-          <dl class="max-w-md text-gray-900 divide-y divide-gray-200 dark:text-white dark:divide-gray-700">
-            {#each Object.entries(selectionInDevModeData) as [key, value]}
-              <div class="flex flex-col pb-3">
-                <dt class="mb-1 text-gray-500 md:text-lg dark:text-gray-400">{key}</dt>
-                <dd class="text-lg text-white font-semibold truncate">{value}</dd>
-              </div>
-            {/each}
-          </dl>
-          
+          <div class="px-5 pb-5">
+            <ul class="max-w-md space-y-1 text-gray-500 list-inside dark:text-gray-400">
+              <li class="flex items-center">
+                <svg class="w-3.5 h-3.5 mr-2 text-green-500 dark:text-green-400 flex-shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z"/>
+               </svg>
+               {selectionInDevMode.prediction}
+              </li>
+              <li class="flex items-center">
+                <svg class="w-3.5 h-3.5 mr-2 text-green-500 dark:text-green-400 flex-shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z"/>
+               </svg>
+               {selectionInDevMode.probability}
+              </li>
+            </ul>
+          </div>
         </div>
       {/if}
-      <button-container class="flex w-full items-center justify-center m-4">
-        <button
-          class="flex flex-row justify-center items-center text-white font-large rounded-md m-2 p-2 bg-Green"
-          on:click={handleDownload}
-        >
-          Download
-        </button>
-        <button
-          class="flex flex-row justify-center items-center text-white font-large rounded-md m-2 p-2 bg-Grey"
-        >
-          🙌 Hands Up
-        </button>
-      </button-container>
+        <div class="text-base font-normal text-white text-center mt-2 w-full">
+          <magic-wand-container
+            class="p-2 rounded-full flex flex-col items-center justify-center m-6"
+          >
+            <img
+              src={magicWand}
+              alt="Magic wand icon"
+              class="-translate-x-[3px] translate-y-[2px] h-10 w-10"
+            />
+          </magic-wand-container>
+        </div>
+      
     </body-container>
   {/if}
 </main>

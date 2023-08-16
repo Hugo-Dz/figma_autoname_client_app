@@ -3,6 +3,7 @@ interface PredictionResult {
   prediction : string;
   probability?: string;
   pixelImage?: string;
+  imageDataBytes? : Uint8Array;
 }
 
 export default PredictionResult;

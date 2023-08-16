@@ -18,7 +18,7 @@ if (figma.editorType === "dev") {
   figma.showUI(__html__); // Show the plugin UI
 
   // Set up the initial state
-  figma.ui.postMessage({ type: "updateSelection", payload: "none" });
+  figma.ui.postMessage({ type: "devModeSelection", payload: null, editorType: "dev" });
 
   // Handle the initial state
   if (figma.currentPage.selection.length === 1) {
@@ -29,7 +29,7 @@ if (figma.editorType === "dev") {
     if (figma.currentPage.selection.length === 1) {
       updateSelection(figma.currentPage.selection[0]);
     } else {
-      figma.ui.postMessage({ type: "updateSelection", payload: "none" });
+      figma.ui.postMessage({ type: "devModeSelection", payload: null, editorType: "dev" });
 
       if (isDebugMode && figma.currentPage.selection.length > 1) {
         console.warn('Warning: Only single layer selection is supported in dev mode.');
@@ -38,9 +38,13 @@ if (figma.editorType === "dev") {
   });
 } else {
   figma.showUI(__html__, { height: pluginUiHeight }); // Start the plugin UI with a specific height
+  // set up the initial state
+  figma.ui.postMessage({ type: "devModeSelection", payload: null, editorType: "design" });
 }
 
-async function updateSelection(selectedLayer: SceneNode) {
+async function updateSelection(selectedLayer: any) {
+
+  // Get the prediction result from the client storage
   const predictionResultJson = await figma.clientStorage.getAsync(selectedLayer.id);
 
   if (predictionResultJson !== undefined) {
@@ -50,17 +54,18 @@ async function updateSelection(selectedLayer: SceneNode) {
     const imageData = await getImageDataFromObjectId(predictionResult.pixelImage);
 
     // Update the pixelImage property with the Uint8Array
-    predictionResult.pixelImage = imageData;
+    predictionResult.imageDataBytes = imageData;
 
     figma.ui.postMessage({
-      type: "updateSelection",
-      payload: JSON.stringify(predictionResult),
+      type: "devModeSelection",
+      payload: predictionResult,
+      editorType: "dev"
     });
   } else {
     if (isDebugMode) {
       console.warn('Warning: No matching node ID found in client storage.');
     }
-    figma.ui.postMessage({ type: "updateSelection", payload: "none" });
+    figma.ui.postMessage({ type: "devModeSelection", payload: null, editorType: "dev" });
   }
 }
 
@@ -469,18 +474,14 @@ async function setImageIndex(index: number): Promise<void> {
   await figma.clientStorage.setAsync("imageIndex", index);
 }
 
-async function getImageDataFromObjectId(objectId: string): Promise<string | null> {
+async function getImageDataFromObjectId(objectId: string): Promise<Uint8Array | null> {
   const imageObject = figma.getNodeById(objectId);
 
   if (imageObject && imageObject.type === "RECTANGLE") {
     const imagePaint = imageObject.fills[0] as ImagePaint;
     const imageBytes = await figma.getImageByHash(imagePaint.imageHash).getBytesAsync();
-    
-    // Convert the Uint8Array to a base64 string
-    const base64Data = btoa(String.fromCharCode.apply(null, imageBytes));
-    const imageDataUrl = "data:image/png;base64," + base64Data;
 
-    return imageDataUrl;
+    return imageBytes;
   }
 
   return null;
