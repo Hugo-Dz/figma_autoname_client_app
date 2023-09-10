@@ -120,6 +120,9 @@ figma.ui.onmessage = async msg => {
 
             const dataStoredAsString = JSON.stringify(predictionResult);
             await figma.clientStorage.setAsync(node.id, dataStoredAsString); // Store the prediction result in clientStorage
+
+            // const predictionText = `${predictionResult.prediction} (${predictionResult.probability})`;
+            // await node.addDevResourceAsync(predictionText); // Add the prediction result as a dev resource
           }
         }
       }
