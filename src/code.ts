@@ -9,10 +9,9 @@ const selectOnlyTopLevelNodes: boolean = false;
 const maxSubNodes: number = 3;
 const pluginUiHeight = isDebugMode ? 500 : 280;
 
-let customTFModel = process.env.PUBLIC_CUSTOM_MODEL;
-const defaultModel: string = customTFModel
-  ? customTFModel
-  : "https://teachablemachine.withgoogle.com/models/7TY9ihr-l/";
+const defaultModel: string =
+  "https://teachablemachine.withgoogle.com/models/EjaSXbBTb/";
+const defaultDesignSystem: string = "https://grab.design/components/";
 const filename: string = toAndroidResourceName(figma.root.name);
 
 figma.showUI(__html__, { height: pluginUiHeight }); // Start the plugin UI with a specific height
@@ -127,7 +126,11 @@ figma.ui.onmessage = async (msg) => {
       filename + "_designSystemURL"
     );
     if (!designSystemURL) {
-      designSystemURL = null;
+      designSystemURL = defaultDesignSystem;
+      await figma.clientStorage.setAsync(
+        filename + "_designSystemURL",
+        designSystemURL
+      );
     }
     console.log("designSystemURL: ", designSystemURL);
 
@@ -148,7 +151,10 @@ figma.ui.onmessage = async (msg) => {
     // send default model to UI
     figma.ui.postMessage({
       type: "modelURL",
-      payload: defaultModel,
+      payload: {
+        modelURL: defaultModel,
+        designSystemURL: defaultDesignSystem ? defaultDesignSystem : null,
+      },
     });
   }
 
@@ -222,29 +228,31 @@ figma.ui.onmessage = async (msg) => {
         // Get existing dev resources
         const links = await node.getDevResourcesAsync();
 
-        // Remove all existing links starting with 'Prediction'
-        for (const link of links) {
-          if (link.name.startsWith("Prediction")) {
-            await node.removeDevResourceAsync(link.url);
-          }
+        if (links) {
+          // Remove all existing links starting with 'Prediction'
+          await Promise.all(links.map(link => {
+            if (link.name.startsWith("Prediction")) {
+              return node.deleteDevResourceAsync(link.url);
+            }
+          }));
         }
 
         // Add new predictions
-        top3Probabilities.forEach(async (prediction, index) => {
+        for (const [index, prediction] of top3Probabilities.entries()) {
           const predictionText = `Prediction ${index + 1}: ${
             prediction.className
           } (${Math.round(prediction.probability * 100)}%)`;
-          console.log(predictionText);
 
           // Convert className to lowercase and replace spaces with dashes
           const classNameURL = prediction.className
             .toLowerCase()
             .replace(/\s+/g, "-");
           const fullURL = designSystemURL + classNameURL;
+          console.log(fullURL, predictionText);
 
-          // Add the new prediction
+          // Add dev resource promise
           await node.addDevResourceAsync(fullURL, predictionText);
-        });
+        }
       }
     }
   }

@@ -156,8 +156,11 @@
     if (event.data.pluginMessage.type === "modelURL") {
       const data = event.data.pluginMessage.payload;
       modelURL = data.modelURL;
-      designSystemURL = data.designSystemURL || ""; // Use an empty string if designSystemURL is null
       init(modelURL + "model.json", modelURL + "metadata.json");
+
+      // update design system URL
+      designSystemURL = data.designSystemURL; // string or null 
+      
 
       isSettingMode = false;
     }
