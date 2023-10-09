@@ -219,6 +219,17 @@ figma.ui.onmessage = async (msg) => {
 
       const node = figma.getNodeById(nodeId);
       if (node) {
+        // Get existing dev resources
+        const links = await node.getDevResourcesAsync();
+
+        // Remove all existing links starting with 'Prediction'
+        for (const link of links) {
+          if (link.name.startsWith("Prediction")) {
+            await node.removeDevResourceAsync(link.url);
+          }
+        }
+
+        // Add new predictions
         top3Probabilities.forEach(async (prediction, index) => {
           const predictionText = `Prediction ${index + 1}: ${
             prediction.className
@@ -231,18 +242,8 @@ figma.ui.onmessage = async (msg) => {
             .replace(/\s+/g, "-");
           const fullURL = designSystemURL + classNameURL;
 
-          // Get existing dev resources
-          const links = await node.getDevResourcesAsync();
-
-          // If the URL already exists, edit it. Otherwise, add a new one.
-          if (links.some((link) => link.url === fullURL)) {
-            await node.editDevResourceAsync(fullURL, {
-              name: predictionText,
-              url: fullURL,
-            });
-          } else {
-            await node.addDevResourceAsync(fullURL, predictionText);
-          }
+          // Add the new prediction
+          await node.addDevResourceAsync(fullURL, predictionText);
         });
       }
     }
