@@ -10,7 +10,7 @@ const maxSubNodes: number = 3;
 const pluginUiHeight = isDebugMode ? 500 : 280;
 
 const defaultModel: string =
-  "https://teachablemachine.withgoogle.com/models/EjaSXbBTb/";
+  "https://teachablemachine.withgoogle.com/models/7TY9ihr-l/";
 const defaultDesignSystem: string = "https://grab.design/components/";
 const filename: string = toAndroidResourceName(figma.root.name);
 
