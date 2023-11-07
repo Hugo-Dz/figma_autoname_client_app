@@ -32,7 +32,6 @@
   let precision: number = 0.45;
   let isSettingMode: boolean = false;
   let modelURL: string = "";
-  let designSystemURL: string = "";
 
   //TM setup
   let model;
@@ -64,10 +63,6 @@
     let newModelURL = (document.getElementById("modelURL") as HTMLInputElement)
       .value;
 
-    let newDesignSystemURL = (
-      document.getElementById("designSystemURL") as HTMLInputElement
-    ).value;
-
     // If the URL is not ended by a slash, add it
     if (!newModelURL.endsWith("/")) {
       newModelURL += "/";
@@ -81,23 +76,6 @@
 
     // And update tmSetup
     init(newModelURL + "model.json", newModelURL + "metadata.json");
-
-    // If the URL is not ended by a slash, add it
-    if (!newDesignSystemURL.endsWith("/")) {
-      newDesignSystemURL += "/";
-    }
-
-    // If the URL is not valid, alert the user
-
-    parent.postMessage(
-      {
-        pluginMessage: {
-          type: "updateDesignSystemURL",
-          payload: newDesignSystemURL,
-        },
-      },
-      "*"
-    );
 
     // Close the settings pannel
     isSettingMode = false;
@@ -158,10 +136,6 @@
       modelURL = data.modelURL;
       init(modelURL + "model.json", modelURL + "metadata.json");
 
-      // update design system URL
-      designSystemURL = data.designSystemURL; // string or null 
-      
-
       isSettingMode = false;
     }
   };
@@ -199,28 +173,40 @@
     let predictedNode: PredictionResult;
 
     if (finalist.probability > precision) {
-      predictedNode = {
-        nodeId: node.nodeId,
-        prediction: finalist.className,
-      };
+      // If type of className is object, set its name and url to the predicted node
 
-      // Send the top 3 predictions to plugin
-      let top3Probabilities = sortedProbabilities.slice(-3).reverse();
-      top3Probabilities = top3Probabilities.filter(
-        (probability) => probability.probability > 0.2
-      );
+      if (typeof finalist.className === "object") {
+        let className = finalist.className.name;
+        let url = finalist.className.url;
 
-      if (top3Probabilities.length > 0) {
-        window.parent.postMessage(
-          {
-            pluginMessage: {
-              type: "top3Probabilities",
-              id: node.nodeId,
-              payload: top3Probabilities,
-            },
-          },
-          "*"
+        predictedNode = {
+          nodeId: node.nodeId,
+          prediction: className,
+          url: url,
+        };
+        // Send the top 3 predictions to plugin
+        let top3Probabilities = sortedProbabilities.slice(-3).reverse();
+        top3Probabilities = top3Probabilities.filter(
+          (probability) => probability.probability > 0.2
         );
+
+        if (top3Probabilities.length > 0) {
+          window.parent.postMessage(
+            {
+              pluginMessage: {
+                type: "top3Probabilities",
+                id: node.nodeId,
+                payload: top3Probabilities,
+              },
+            },
+            "*"
+          );
+        }
+      } else {
+        predictedNode = {
+          nodeId: node.nodeId,
+          prediction: finalist.className,
+        };
       }
     } else {
       predictedNode = {
@@ -263,7 +249,7 @@
   class="flex flex-col items-center justify-between px-4 py-4 h-full bg-[#2C2C2C]"
 >
   <div class="flex flex-col items-center w-full space-y-4 h-full">
-    {#if !isSettingMode && !isDebugMode}
+    {#if !isDebugMode}
       <p
         class="text-xs text-slate-50 w-full px-3 py-2 border-[1px] border-slate-600 border-opacity-40 rounded-md bg-slate-600 bg-opacity-30"
       >
@@ -296,16 +282,6 @@
             type="url"
             class="text-xs h-auto text-slate-50 w-full font-medium mb-4 border-[1px] border-slate-600 border-opacity-40 rounded-md bg-slate-600 bg-opacity-30"
             value={modelURL}
-          />
-          <!-- New code for design system URL -->
-          <div class="flex flex-row justify-between items-center w-full">
-            <p>Design System URL (Optional)</p>
-          </div>
-          <Textarea
-            id="designSystemURL"
-            type="url"
-            bind:value={designSystemURL}
-            class="text-xs h-8 text-slate-50 w-full font-medium mb-4 border-[1px] border-slate-600 border-opacity-40 rounded-md bg-slate-600 bg-opacity-30"
           />
         </div>
       {:else if !isModelReady}

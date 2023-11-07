@@ -120,26 +120,11 @@ figma.ui.onmessage = async (msg) => {
     }
     console.log("current_model: ", current_model);
 
-    // get design system URL from Client Storage
-    // if no design system URL, use null
-    let designSystemURL: string = await figma.clientStorage.getAsync(
-      filename + "_designSystemURL"
-    );
-    if (!designSystemURL) {
-      designSystemURL = defaultDesignSystem;
-      await figma.clientStorage.setAsync(
-        filename + "_designSystemURL",
-        designSystemURL
-      );
-    }
-    console.log("designSystemURL: ", designSystemURL);
-
     // send current model and design system URL to UI
     figma.ui.postMessage({
       type: "modelURL",
       payload: {
         modelURL: current_model,
-        designSystemURL: designSystemURL,
       },
     });
   }
@@ -153,29 +138,9 @@ figma.ui.onmessage = async (msg) => {
       type: "modelURL",
       payload: {
         modelURL: defaultModel,
-        designSystemURL: defaultDesignSystem ? defaultDesignSystem : null,
       },
     });
   }
-
-  // // Reset all storage data
-  // if (msg.type === "resetAllRequest") {
-  //   // get all keys from Client Storage
-  //   const keys = await figma.clientStorage.keysAsync();
-  //   // notify number of keys and double check with user
-  //   const resetAll = figma.notify(
-  //     `You are about to reset ${keys.length} keys.`,
-  //     {
-  //       timeout: 10000,
-  //       button: {
-  //         text: "Confirm",
-  //         action: () => {
-  //           removeAllClientStoageData(keys);
-  //         },
-  //       },
-  //     }
-  //   );
-  // }
 
   // if "updateModelURL" msg type, console.log msg and payload
   if (msg.type === "updateModelURL") {
@@ -186,85 +151,45 @@ figma.ui.onmessage = async (msg) => {
     });
   }
 
-  // // if "requestLog" msg type, console log Figma client storage
-  // if (msg.type === "requestLog") {
-  //   // get all keys from Client Storage
-  //   const keys = await figma.clientStorage.keysAsync();
-
-  //   // get all values from Client Storage, parse them and console log them
-  //   await Promise.all(
-  //     keys.map(async (key) => {
-  //       const value = await figma.clientStorage.getAsync(key);
-  //       try {
-  //         // Try parsing the value as JSON
-  //         const parsedValue = JSON.parse(value);
-  //         console.log(`Key: ${key}`, parsedValue);
-  //       } catch (error) {
-  //         // If an error occurs, log the error and the original value
-  //         console.warn(`Error parsing value for key "${key}": ${error}`);
-  //         console.log(`Original value: ${value}`);
-  //       }
-  //     })
-  //   );
-  // }
-
   if (msg.type === "top3Probabilities") {
-    // Get design system URL from Client Storage
-    let designSystemURL: string = await figma.clientStorage.getAsync(
-      filename + "_designSystemURL"
-    );
+    // if debug mode, console.log msg and payload
+    if (isDebugMode) {
+      console.log("top3Probabilities", msg.payload);
+    }
+    const nodeId = msg.id;
+    const top3Probabilities = msg.payload;
 
-    if (!designSystemURL) {
-      // stop if no design system URL
-      console.log(
-        "No design system URL found. Please set a design system URL in the plugin UI."
-      );
-    } else {
-      const nodeId = msg.id;
-      const top3Probabilities = msg.payload;
+    const node = figma.getNodeById(nodeId);
+    if (node) {
+      // Get existing dev resources
+      const links = await node.getDevResourcesAsync();
 
-      const node = figma.getNodeById(nodeId);
-      if (node) {
-        // Get existing dev resources
-        const links = await node.getDevResourcesAsync();
-
-        if (links) {
-          // Remove all existing links starting with 'Prediction'
-          await Promise.all(links.map(link => {
+      if (links) {
+        // Remove all existing links starting with 'Prediction'
+        await Promise.all(
+          links.map((link) => {
             if (link.name.startsWith("Prediction")) {
               return node.deleteDevResourceAsync(link.url);
             }
-          }));
-        }
+          })
+        );
+      }
 
-        // Add new predictions
-        for (const [index, prediction] of top3Probabilities.entries()) {
-          const predictionText = `Prediction ${index + 1}: ${
-            prediction.className
-          } (${Math.round(prediction.probability * 100)}%)`;
-
-          // Convert className to lowercase and replace spaces with dashes
-          const classNameURL = prediction.className
-            .toLowerCase()
-            .replace(/\s+/g, "-");
-          const fullURL = designSystemURL + classNameURL;
+      // Add new predictions
+      for (const [index, prediction] of top3Probabilities.entries()) {
+        const predictionText = `Prediction ${index + 1}: ${
+          prediction.className.name
+        } (${Math.round(prediction.probability * 100)}%)`;
+        const fullURL = prediction.className.url;
+        // if debug mode, console.log fullURL and predictionText
+        if (isDebugMode) {
           console.log(fullURL, predictionText);
-
-          // Add dev resource promise
-          await node.addDevResourceAsync(fullURL, predictionText);
         }
+
+        // Add dev resource promise
+        await node.addDevResourceAsync(fullURL, predictionText);
       }
     }
-  }
-
-  if (msg.type === "updateDesignSystemURL") {
-    const designSystemURL = msg.payload;
-
-    // Save the URL to client storage
-    await figma.clientStorage.setAsync(
-      filename + "_designSystemURL",
-      designSystemURL
-    );
   }
 };
 
