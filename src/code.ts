@@ -11,7 +11,6 @@ const pluginUiHeight = isDebugMode ? 500 : 280;
 
 const defaultModel: string =
   "https://teachablemachine.withgoogle.com/models/7TY9ihr-l/";
-const defaultDesignSystem: string = "https://grab.design/components/";
 const filename: string = toAndroidResourceName(figma.root.name);
 
 figma.showUI(__html__, { height: pluginUiHeight }); // Start the plugin UI with a specific height
