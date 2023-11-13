@@ -35,6 +35,7 @@
 
   //TM setup
   let model;
+  let classLabels = [];
 
   //Badge note
   const versionNote: string =
@@ -141,12 +142,29 @@
   };
 
   async function init(modelURL: string, metadataURL: string) {
-    //@ts-ignore
-    model = await tmImage.load(modelURL, metadataURL);
-    isModelReady = true;
-    if (isDebugMode) {
-      console.log(`[Svelte]: Model ready`, modelURL);
+    try {
+      // Try to load as a tfjs GraphModel
+      // @ts-ignore
+      model = await tf.loadGraphModel(modelURL);
+      // Load class labels from metadata.json
+      classLabels = await loadClassLabels(metadataURL);
+      if (isDebugMode) {
+        console.log(`[Svelte]: TensorFlow.js GraphModel ready`, modelURL);
+      }
+    } catch (error) {
+      console.error("Error loading tfjs GraphModel:", error);
+      try {
+        // If it fails, try to load as a Teachable Machine model
+        //@ts-ignore
+        model = await tmImage.load(modelURL, metadataURL);
+        if (isDebugMode) {
+          console.log(`[Svelte]: Teachable Machine model ready`, modelURL);
+        }
+      } catch (tmError) {
+        console.error("Error loading Teachable Machine model:", tmError);
+      }
     }
+    isModelReady = true;
   }
 
   async function predict(node: BinaryNode): Promise<PredictionResult> {
@@ -158,7 +176,24 @@
       sampleImage = pixelImage;
     }
 
-    const prediction: any[] = await model.predict(pixelImage);
+    let prediction;
+    // @ts-ignore
+    if (model instanceof tf.GraphModel) {
+      // If the model is a tf.GraphModel, use the execute method
+      // @ts-ignore
+      const tensor = tf.browser.fromPixels(pixelImage).expandDims(0).toFloat();
+      const output = model.execute(tensor);
+      const probabilities = Array.from(output.dataSync());
+      prediction = classLabels.map((label, i) => ({
+        className: label,
+        probability: probabilities[i],
+      }));
+    } else {
+      // Otherwise, use the predict method
+      prediction = await model.predict(pixelImage);
+    }
+
+    console.log(prediction);
 
     let sortedProbabilities = prediction.sort(
       (a, b) => a.probability - b.probability
@@ -174,7 +209,6 @@
 
     if (finalist.probability > precision) {
       // If type of className is object, set its name and url to the predicted node
-
       if (typeof finalist.className === "object") {
         let className = finalist.className.name;
         let url = finalist.className.url;
@@ -240,6 +274,12 @@
     const base64Data = btoa(String.fromCharCode.apply(null, bytes)); //No Buffer.from(bytes).toString('base64'); cause we are not in Node JS
     newImage.src = "data:image/png;base64," + base64Data;
     return newImage;
+  }
+
+  async function loadClassLabels(metadataURL) {
+    const response = await fetch(metadataURL);
+    const metadata = await response.json();
+    return metadata.labels;
   }
 </script>
 
