@@ -143,28 +143,19 @@
 
   async function init(modelURL: string, metadataURL: string) {
     try {
-      // Try to load as a tfjs GraphModel
+      // Try to load as a tfjs LayersModel
       // @ts-ignore
-      model = await tf.loadGraphModel(modelURL);
+      model = await tf.loadLayersModel(modelURL);
       // Load class labels from metadata.json
       classLabels = await loadClassLabels(metadataURL);
-      if (isDebugMode) {
-        console.log(`[Svelte]: TensorFlow.js GraphModel ready`, modelURL);
-      }
+    
     } catch (error) {
-      console.error("Error loading tfjs GraphModel:", error);
-      try {
-        // If it fails, try to load as a Teachable Machine model
-        //@ts-ignore
-        model = await tmImage.load(modelURL, metadataURL);
-        if (isDebugMode) {
-          console.log(`[Svelte]: Teachable Machine model ready`, modelURL);
-        }
-      } catch (tmError) {
-        console.error("Error loading Teachable Machine model:", tmError);
-      }
+      console.error("Error loading tfjs LayersModel:", error);
     }
     isModelReady = true;
+    if (isDebugMode) {
+      console.log(`[Svelte]: Model loaded`);
+    }
   }
 
   async function predict(node: BinaryNode): Promise<PredictionResult> {
@@ -176,24 +167,28 @@
       sampleImage = pixelImage;
     }
 
-    let prediction;
+    // Convert the image to a tensor and expand dimensions
     // @ts-ignore
-    if (model instanceof tf.GraphModel) {
-      // If the model is a tf.GraphModel, use the execute method
-      // @ts-ignore
-      const tensor = tf.browser.fromPixels(pixelImage).expandDims(0).toFloat();
-      const output = model.execute(tensor);
-      const probabilities = Array.from(output.dataSync());
-      prediction = classLabels.map((label, i) => ({
-        className: label,
-        probability: probabilities[i],
-      }));
-    } else {
-      // Otherwise, use the predict method
-      prediction = await model.predict(pixelImage);
-    }
+    const imageTensor = tf.browser
+      .fromPixels(pixelImage)
+      .expandDims(0)
+      .toFloat();
 
-    let sortedProbabilities = prediction.sort(
+    // Use the predict method
+    const predictionTensor = await model.predict(imageTensor);
+
+    // Get the data from the prediction tensor
+    const predictionData = predictionTensor.dataSync();
+
+    // Map the prediction data to class labels and probabilities
+    const predictions:any = Array.from(predictionData).map((probability, index) => {
+      return {
+        className: classLabels[index],
+        probability: probability,
+      };
+    });
+
+    let sortedProbabilities = predictions.sort(
       (a, b) => a.probability - b.probability
     );
 
