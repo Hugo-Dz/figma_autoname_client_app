@@ -193,8 +193,6 @@
       prediction = await model.predict(pixelImage);
     }
 
-    console.log(prediction);
-
     let sortedProbabilities = prediction.sort(
       (a, b) => a.probability - b.probability
     );
