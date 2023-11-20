@@ -317,6 +317,9 @@
             value={modelURL}
           />
         </div>
+        <p class="text-xs text-left text-gray-400 font-small">
+          Need help? Check out our <u><b><a href="https://github.com/Hugo-Dz/figma_autoname_client_app/blob/main/classification.ipynb" target="_blank">quick tutorial</a></b></u>.
+        </p>
       {:else if !isModelReady}
         Please wait the model loading
       {:else}
