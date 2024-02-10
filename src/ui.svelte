@@ -81,11 +81,7 @@
     // Close the settings pannel
     isSettingMode = false;
     isModelReady = false;
-
-    // Close the settings pannel
-    isSettingMode = false;
-    isModelReady = false;
-  };
+};
 
   // Reset the model URL and set to initial value
   const handleModelReset = () => {
@@ -142,15 +138,20 @@
   };
 
   async function init(modelURL: string, metadataURL: string) {
-    try {
-      // Try to load as a tfjs LayersModel
-      // @ts-ignore
-      model = await tf.loadLayersModel(modelURL);
-      // Load class labels from metadata.json
-      classLabels = await loadClassLabels(metadataURL);
-    
-    } catch (error) {
-      console.error("Error loading tfjs LayersModel:", error);
+    if (modelURL.startsWith("https://teachablemachine.withgoogle.com")) {
+      // Load the model using tmImage for Teachable Machine URLs
+      //@ts-ignore
+      model = await tmImage.load(modelURL, metadataURL);
+    } else {
+      try {
+        // Try to load as a tfjs LayersModel
+        // @ts-ignore
+        model = await tf.loadLayersModel(modelURL);
+        // Load class labels from metadata.json
+        classLabels = await loadClassLabels(metadataURL);
+      } catch (error) {
+        console.error("Error loading tfjs LayersModel:", error);
+      }
     }
     isModelReady = true;
     if (isDebugMode) {
@@ -166,29 +167,34 @@
     if (isDebugMode) {
       sampleImage = pixelImage;
     }
+    let prediction: any[];
 
-    // Convert the image to a tensor and expand dimensions
-    // @ts-ignore
-    const imageTensor = tf.browser
-      .fromPixels(pixelImage)
-      .expandDims(0)
-      .toFloat();
+    if (modelURL.startsWith("https://teachablemachine.withgoogle.com")) {
+      // For Teachable Machine models, we can directly use the pixel image
+      prediction = await model.predict(pixelImage);
+    } else {
+      // Convert the image to a tensor and expand dimensions
+      // @ts-ignore
+      const imageTensor = tf.browser
+        .fromPixels(pixelImage)
+        .expandDims(0)
+        .toFloat();
 
-    // Use the predict method
-    const predictionTensor = await model.predict(imageTensor);
+      // Use the predict method
+      const predictionTensor = await model.predict(imageTensor);
 
-    // Get the data from the prediction tensor
-    const predictionData = predictionTensor.dataSync();
+      // Get the data from the prediction tensor
+      const predictionData = predictionTensor.dataSync();
 
-    // Map the prediction data to class labels and probabilities
-    const predictions:any = Array.from(predictionData).map((probability, index) => {
-      return {
-        className: classLabels[index],
-        probability: probability,
-      };
-    });
-
-    let sortedProbabilities = predictions.sort(
+      // Map the prediction data to class labels and probabilities
+      prediction = Array.from(predictionData).map((probability, index) => {
+        return {
+          className: classLabels[index],
+          probability: probability,
+        };
+      });
+    }
+    let sortedProbabilities = prediction.sort(
       (a, b) => a.probability - b.probability
     );
 
@@ -318,7 +324,14 @@
           />
         </div>
         <p class="text-xs text-left text-gray-400 font-small">
-          Need help? Check out our <u><b><a href="https://github.com/Hugo-Dz/figma_autoname_client_app/blob/main/classification.ipynb" target="_blank">quick tutorial</a></b></u>.
+          Need help? Check out our <u
+            ><b
+              ><a
+                href="https://github.com/Hugo-Dz/figma_autoname_client_app/blob/main/classification.ipynb"
+                target="_blank">quick tutorial</a
+              ></b
+            ></u
+          >.
         </p>
       {:else if !isModelReady}
         Please wait the model loading
